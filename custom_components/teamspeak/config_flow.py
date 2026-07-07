@@ -89,6 +89,10 @@ class TeamSpeakConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            # Keys are copied out of a telnet window more often than not -
+            # silently drop surrounding whitespace and line breaks.
+            user_input[CONF_HOST] = user_input[CONF_HOST].strip()
+            user_input[CONF_API_KEY] = "".join(user_input[CONF_API_KEY].split())
             self._async_abort_entries_match(
                 {CONF_HOST: user_input[CONF_HOST], CONF_SID: user_input[CONF_SID]}
             )
@@ -138,6 +142,7 @@ class TeamSpeakConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            user_input[CONF_HOST] = user_input[CONF_HOST].strip()
             self._async_abort_entries_match(
                 {CONF_HOST: user_input[CONF_HOST], CONF_SID: user_input[CONF_SID]}
             )
