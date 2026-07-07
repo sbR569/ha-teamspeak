@@ -1,0 +1,109 @@
+# TeamSpeak Server – Home Assistant Integration
+
+Custom Integration, die einen selbst gehosteten TeamSpeak-Server über die
+**ServerQuery-Schnittstelle** (raw/telnet, Standard-Port `10011`) abfragt.
+Funktioniert mit TeamSpeak 3 Servern und dem neuen TeamSpeak Server, keine
+zusätzlichen Python-Abhängigkeiten nötig.
+
+## Sensoren
+
+Alle Sensoren hängen an einem Gerät „TeamSpeak &lt;host&gt;“:
+
+| Entität | Inhalt |
+|---|---|
+| `sensor.teamspeak_<host>_status` | Server-Status (`online` / `offline`) — zeigt auch `offline`, wenn der Server nicht erreichbar ist |
+| `sensor.teamspeak_<host>_online_seit` | Zeitstempel, seit wann der Server läuft |
+| `sensor.teamspeak_<host>_version` | Server-Version (Diagnose-Entität) |
+| `sensor.teamspeak_<host>_maximale_clients` | Maximal erlaubte Clients |
+| `sensor.teamspeak_<host>_verbundene_clients` | Anzahl verbundener Clients; die Namen stehen im Attribut `client_names` (Query-Clients werden herausgefiltert) |
+
+Abfrage-Intervall: alle 30 Sekunden.
+
+## Installation
+
+### Variante A: Manuell
+
+1. Den Ordner `custom_components/teamspeak` aus diesem Repository in den
+   Home-Assistant-Konfigurationsordner kopieren, sodass folgende Struktur entsteht:
+
+   ```
+   config/
+   └── custom_components/
+       └── teamspeak/
+           ├── __init__.py
+           ├── manifest.json
+           └── ...
+   ```
+
+2. Home Assistant neu starten.
+
+### Variante B: HACS (Custom Repository)
+
+1. Das Repository zu GitHub pushen.
+2. In HACS: **Integrationen → ⋮ → Benutzerdefinierte Repositories** → Repository-URL
+   eintragen, Kategorie **Integration**.
+3. „TeamSpeak Server“ installieren und Home Assistant neu starten.
+
+## Einrichtung
+
+**Einstellungen → Geräte & Dienste → Integration hinzufügen → „TeamSpeak Server“**
+
+| Feld | Beschreibung |
+|---|---|
+| Host | Hostname oder IP des TeamSpeak-Servers |
+| ServerQuery-Port | Standard `10011` (raw/telnet — **nicht** der SSH-Query-Port `10022` und nicht der Voice-Port `9987`) |
+| ServerQuery-Benutzername | Standard `serveradmin` |
+| ServerQuery-Passwort | Wird beim ersten Serverstart im Log ausgegeben; zurücksetzbar mit `ts3server_minimal_runscript.sh serveradmin_password=NEUES_PASSWORT` bzw. beim neuen TS-Server über `tsserver --serveradmin-password` |
+| Virtuelle Server-ID | Standard `1` (nur relevant, wenn mehrere virtuelle Server laufen) |
+
+### Wichtig: Anti-Flood-Whitelist
+
+TeamSpeak drosselt bzw. bannt IPs, die viele Query-Befehle senden. Die Integration
+bleibt mit 5 Befehlen pro 30 Sekunden zwar unter dem Standard-Limit, es ist aber
+trotzdem empfehlenswert, die IP deines Home-Assistant-Hosts in die Datei
+`query_ip_allowlist.txt` (ältere Versionen: `query_ip_whitelist.txt`) im
+TeamSpeak-Serververzeichnis einzutragen — eine IP pro Zeile, danach den
+TeamSpeak-Server neu starten.
+
+Läuft der TeamSpeak-Server in Docker, muss Port `10011/tcp` freigegeben sein
+(`-p 10011:10011`).
+
+## Verbindung vorab testen
+
+Ohne Home Assistant, direkt von einem Rechner mit Python 3.11+:
+
+```
+python test_connection.py <host> [--port 10011] [--user serveradmin] [--sid 1]
+```
+
+Gibt Status, Online-seit, Version, maximale Clients und alle verbundenen
+Client-Namen aus — praktisch, um Zugangsdaten und Erreichbarkeit zu prüfen.
+
+## Beispiel: Client-Namen im Dashboard anzeigen
+
+Markdown-Karte:
+
+```yaml
+type: markdown
+content: >-
+  **TeamSpeak ({{ states('sensor.teamspeak_<host>_verbundene_clients') }} online)**
+
+  {% for name in state_attr('sensor.teamspeak_<host>_verbundene_clients', 'client_names') or [] %}
+  - {{ name }}
+  {% endfor %}
+```
+
+## Beispiel: Automatisierung bei Client-Verbindung
+
+```yaml
+triggers:
+  - trigger: numeric_state
+    entity_id: sensor.teamspeak_<host>_verbundene_clients
+    above: 0
+actions:
+  - action: notify.notify
+    data:
+      message: >-
+        Jemand ist auf dem TeamSpeak:
+        {{ state_attr('sensor.teamspeak_<host>_verbundene_clients', 'client_names') | join(', ') }}
+```
