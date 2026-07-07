@@ -48,6 +48,44 @@ Abfrage-Intervall: alle 30 Sekunden.
 
 **Einstellungen → Geräte & Dienste → Integration hinzufügen → „TeamSpeak Server“**
 
+Beim Hinzufügen kannst du zwischen zwei Verbindungsarten wählen:
+
+### Variante 1: WebQuery mit API-Key (empfohlen)
+
+Die HTTP-API des TeamSpeak-Servers (ab Server-Version 3.12.0). Sie muss auf dem
+Server erst aktiviert werden:
+
+1. **WebQuery aktivieren** — in der `ts3server.ini`:
+
+   ```ini
+   query_protocols=raw,http
+   ```
+
+   Bei Docker stattdessen die Umgebungsvariable `TS3SERVER_QUERY_PROTOCOLS=raw,http`
+   setzen und Port `10080/tcp` freigeben (`-p 10080:10080`). Danach den Server
+   neu starten.
+
+2. **API-Key erstellen** — einmalig per raw ServerQuery (z. B. `telnet <host> 10011`):
+
+   ```
+   login serveradmin DEIN_PASSWORT
+   use sid=1
+   apikeyadd scope=read lifetime=0
+   ```
+
+   Die Antwort enthält den Key (`apikey=BAA...`) — er wird **nur einmal** angezeigt.
+   `scope=read` reicht für diese Integration, `lifetime=0` bedeutet unbegrenzt gültig.
+
+| Feld | Beschreibung |
+|---|---|
+| Host | Hostname oder IP des TeamSpeak-Servers |
+| WebQuery-Port | Standard `10080` (HTTP) bzw. `10443` mit HTTPS |
+| API-Key | Der mit `apikeyadd` erzeugte Key |
+| Virtuelle Server-ID | Standard `1` |
+| HTTPS verwenden | Nur aktivieren, wenn WebQuery mit TLS läuft (`https`-Protokoll, Port `10443`) |
+
+### Variante 2: Klassisches ServerQuery (Benutzername/Passwort)
+
 | Feld | Beschreibung |
 |---|---|
 | Host | Hostname oder IP des TeamSpeak-Servers |
@@ -73,11 +111,44 @@ Läuft der TeamSpeak-Server in Docker, muss Port `10011/tcp` freigegeben sein
 Ohne Home Assistant, direkt von einem Rechner mit Python 3.11+:
 
 ```
+# Klassisches ServerQuery (Passwort wird abgefragt):
 python test_connection.py <host> [--port 10011] [--user serveradmin] [--sid 1]
+
+# WebQuery mit API-Key:
+python test_connection.py <host> --api-key DEIN_API_KEY [--port 10080] [--sid 1]
+```
+
+Schnelltest der WebQuery-API auch per curl:
+
+```
+curl -H "x-api-key: DEIN_API_KEY" http://<host>:10080/1/serverinfo
 ```
 
 Gibt Status, Online-seit, Version, maximale Clients und alle verbundenen
 Client-Namen aus — praktisch, um Zugangsdaten und Erreichbarkeit zu prüfen.
+
+## Logging
+
+Die Integration loggt aussagekräftig ins Home-Assistant-Log:
+
+- **INFO**: Statuswechsel des Servers (`online` → `offline`), Clients, die sich
+  verbinden oder trennen (mit Namen), erkannte Server-Neustarts sowie
+  wiederhergestellte Verbindungen.
+- **WARNING**: Server nicht erreichbar (einmalig, kein Log-Spam bei anhaltendem Ausfall).
+- **ERROR**: Fehlgeschlagene Query-Anfragen (z. B. ungültiger API-Key).
+- **DEBUG**: Jeder Poll mit Dauer, Status, Client-Zahl und Version sowie alle
+  einzelnen Query-Kommandos (Passwörter werden nie geloggt).
+
+Debug-Logging aktivieren in der `configuration.yaml`:
+
+```yaml
+logger:
+  logs:
+    custom_components.teamspeak: debug
+```
+
+Oder zur Laufzeit über **Einstellungen → Geräte & Dienste → TeamSpeak Server →
+„Debug-Protokollierung aktivieren“**.
 
 ## Beispiel: Client-Namen im Dashboard anzeigen
 

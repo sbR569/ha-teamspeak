@@ -3,7 +3,26 @@
     "step": {
       "user": {
         "title": "TeamSpeak Server",
-        "description": "Connect to the ServerQuery interface of your TeamSpeak server.",
+        "description": "How should the integration talk to your TeamSpeak server?",
+        "menu_options": {
+          "webquery": "WebQuery HTTP API with API key (recommended)",
+          "serverquery": "Classic ServerQuery (username/password)"
+        }
+      },
+      "webquery": {
+        "title": "TeamSpeak WebQuery",
+        "description": "WebQuery must be enabled on the server (query_protocols=raw,http). Create an API key with the ServerQuery command: apikeyadd scope=read lifetime=0",
+        "data": {
+          "host": "Host",
+          "port": "WebQuery port",
+          "api_key": "API key",
+          "sid": "Virtual server ID",
+          "ssl": "Use HTTPS"
+        }
+      },
+      "serverquery": {
+        "title": "TeamSpeak ServerQuery",
+        "description": "Connect to the raw ServerQuery interface of your TeamSpeak server.",
         "data": {
           "host": "Host",
           "port": "ServerQuery port",

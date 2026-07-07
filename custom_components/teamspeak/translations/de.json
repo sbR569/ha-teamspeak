@@ -3,7 +3,26 @@
     "step": {
       "user": {
         "title": "TeamSpeak Server",
-        "description": "Verbindung zur ServerQuery-Schnittstelle deines TeamSpeak-Servers herstellen.",
+        "description": "Wie soll die Integration mit deinem TeamSpeak-Server kommunizieren?",
+        "menu_options": {
+          "webquery": "WebQuery HTTP-API mit API-Key (empfohlen)",
+          "serverquery": "Klassisches ServerQuery (Benutzername/Passwort)"
+        }
+      },
+      "webquery": {
+        "title": "TeamSpeak WebQuery",
+        "description": "WebQuery muss auf dem Server aktiviert sein (query_protocols=raw,http). API-Key erstellen mit dem ServerQuery-Befehl: apikeyadd scope=read lifetime=0",
+        "data": {
+          "host": "Host",
+          "port": "WebQuery-Port",
+          "api_key": "API-Key",
+          "sid": "Virtuelle Server-ID",
+          "ssl": "HTTPS verwenden"
+        }
+      },
+      "serverquery": {
+        "title": "TeamSpeak ServerQuery",
+        "description": "Verbindung zur raw ServerQuery-Schnittstelle deines TeamSpeak-Servers herstellen.",
         "data": {
           "host": "Host",
           "port": "ServerQuery-Port",

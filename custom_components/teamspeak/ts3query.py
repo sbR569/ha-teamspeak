@@ -7,7 +7,10 @@ TeamSpeak 3 servers as well as the newer TeamSpeak Server releases.
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
+
+_LOGGER = logging.getLogger(__name__)
 
 # Error id returned by the server for a wrong ServerQuery login.
 ERROR_ID_INVALID_LOGIN = 520
@@ -98,6 +101,7 @@ class TS3QueryClient:
 
     async def connect(self) -> None:
         """Open the connection and consume the two banner lines."""
+        _LOGGER.debug("Connecting to ServerQuery at %s:%s", self._host, self._port)
         self._reader, self._writer = await asyncio.wait_for(
             asyncio.open_connection(self._host, self._port), self._timeout
         )
@@ -118,6 +122,9 @@ class TS3QueryClient:
     async def command(self, cmd: str) -> list[dict[str, str]]:
         """Send a command and return the parsed data items."""
         assert self._writer is not None
+        # Log the command name only - "login" carries the password.
+        cmd_name = cmd.split(" ", 1)[0]
+        _LOGGER.debug("Sending ServerQuery command %r", cmd_name)
         self._writer.write(cmd.encode("utf-8") + b"\n")
         await self._writer.drain()
 
@@ -131,6 +138,9 @@ class TS3QueryClient:
                 error_id = int(error.get("id", "-1"))
                 if error_id != 0:
                     raise TS3QueryError(error_id, error.get("msg", "unknown error"))
+                _LOGGER.debug(
+                    "Command %r ok, %d data item(s)", cmd_name, len(items)
+                )
                 return items
             items.extend(_parse_block(line))
 
