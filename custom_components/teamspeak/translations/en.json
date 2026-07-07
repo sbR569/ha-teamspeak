@@ -35,6 +35,7 @@
     "error": {
       "cannot_connect": "Failed to connect",
       "invalid_auth": "Invalid authentication",
+      "invalid_sid": "This virtual server ID does not exist on the server",
       "unknown": "Unexpected error"
     },
     "abort": {

@@ -107,9 +107,12 @@ class TeamSpeakConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
             except WebQueryError as err:
                 _LOGGER.warning("WebQuery validation failed: %s", err)
-                errors["base"] = (
-                    "invalid_auth" if err.is_auth_error else "cannot_connect"
-                )
+                if err.code == 1024:  # invalid serverID
+                    errors[CONF_SID] = "invalid_sid"
+                elif err.is_auth_error:
+                    errors["base"] = "invalid_auth"
+                else:
+                    errors["base"] = "cannot_connect"
             except (aiohttp.ClientError, OSError, asyncio.TimeoutError) as err:
                 _LOGGER.warning(
                     "Cannot connect to WebQuery at %s:%s: %s",

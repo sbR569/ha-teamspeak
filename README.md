@@ -81,8 +81,17 @@ Server erst aktiviert werden:
 | Host | Hostname oder IP des TeamSpeak-Servers |
 | WebQuery-Port | Standard `10080` (HTTP) bzw. `10443` mit HTTPS |
 | API-Key | Der mit `apikeyadd` erzeugte Key |
-| Virtuelle Server-ID | Standard `1` |
+| Virtuelle Server-ID | Standard `1` — **prüfen!** Die tatsächliche ID zeigt `serverlist` (Spalte `virtualserver_id`); beim TeamSpeak-6-Server ist sie oft nicht 1 |
 | HTTPS verwenden | Nur aktivieren, wenn WebQuery mit TLS läuft (`https`-Protokoll, Port `10443`) |
+
+#### Hinweis für den neuen TeamSpeak-Server (TS6)
+
+- API-Keys des TS6-Servers beginnen mit `AQ…` (TS3: `BAA…`) — beides ist gültig.
+- TS6 verweigert `serverinfo` für Keys mit `scope=read`. Die Integration fängt das
+  ab: Status, Version und verbundene Clients funktionieren trotzdem, aber
+  **„Online seit“ und „Maximale Clients“ bleiben unbekannt** (eine entsprechende
+  Warnung erscheint einmalig im Log). Für alle Sensoren einen Key mit höherem
+  Scope erzeugen: `apikeyadd scope=write lifetime=0` (oder `scope=manage`).
 
 ### Variante 2: Klassisches ServerQuery (Benutzername/Passwort)
 

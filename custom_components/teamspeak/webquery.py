@@ -81,10 +81,34 @@ async def fetch_server_data_webquery(
     {"serverinfo": {...}, "client_names": [...]} with query clients filtered.
     """
     scheme = "https" if use_ssl else "http"
-    base_url = f"{scheme}://{host}:{port}/{sid}"
+    root_url = f"{scheme}://{host}:{port}"
+    base_url = f"{root_url}/{sid}"
 
-    serverinfo_items = await _request(session, base_url, api_key, "serverinfo", timeout)
-    serverinfo = serverinfo_items[0] if serverinfo_items else {}
+    serverinfo: dict[str, Any] = {}
+    serverinfo_denied = False
+    try:
+        serverinfo_items = await _request(
+            session, base_url, api_key, "serverinfo", timeout
+        )
+        serverinfo = serverinfo_items[0] if serverinfo_items else {}
+    except WebQueryError as err:
+        if not err.is_auth_error:
+            raise
+        # The TeamSpeak 6 server denies 'serverinfo' to read-scope API keys
+        # while 'clientlist' and 'version' keep working. Degrade gracefully:
+        # a succeeding clientlist proves the server is online, and 'version'
+        # still yields the server version.
+        serverinfo_denied = True
+        _LOGGER.debug(
+            "'serverinfo' denied for this API key (%s); falling back to "
+            "'version' + 'clientlist' only",
+            err,
+        )
+        version_items = await _request(session, root_url, api_key, "version", timeout)
+        if version_items:
+            serverinfo["virtualserver_version"] = version_items[0].get("version")
+        serverinfo["virtualserver_status"] = "online"
+
     clientlist = await _request(session, base_url, api_key, "clientlist", timeout)
 
     client_names = sorted(
@@ -95,4 +119,8 @@ async def fetch_server_data_webquery(
         ),
         key=str.casefold,
     )
-    return {"serverinfo": serverinfo, "client_names": client_names}
+    return {
+        "serverinfo": serverinfo,
+        "client_names": client_names,
+        "serverinfo_denied": serverinfo_denied,
+    }

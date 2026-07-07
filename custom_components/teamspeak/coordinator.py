@@ -70,6 +70,7 @@ class TeamSpeakCoordinator(DataUpdateCoordinator[TeamSpeakData]):
             update_interval=SCAN_INTERVAL,
         )
         self._unreachable = False
+        self._scope_warning_logged = False
 
     @property
     def _uses_webquery(self) -> bool:
@@ -126,6 +127,18 @@ class TeamSpeakCoordinator(DataUpdateCoordinator[TeamSpeakData]):
         if self._unreachable:
             self._unreachable = False
             _LOGGER.info("Connection to TeamSpeak server %s:%s restored", host, port)
+
+        if raw.get("serverinfo_denied") and not self._scope_warning_logged:
+            self._scope_warning_logged = True
+            _LOGGER.warning(
+                "The WebQuery API key for %s is not allowed to run 'serverinfo' "
+                "(TeamSpeak 6 denies this to read-scope keys). Status, version and "
+                "client sensors keep working, but 'online since' and 'maximum "
+                "clients' stay unknown. Create a key with a higher scope "
+                "(apikeyadd scope=write lifetime=0) and reconfigure to get all "
+                "sensors",
+                host,
+            )
 
         info = raw["serverinfo"]
         client_names: list[str] = raw["client_names"]

@@ -35,6 +35,7 @@
     "error": {
       "cannot_connect": "Verbindung fehlgeschlagen",
       "invalid_auth": "Ungültige Anmeldedaten",
+      "invalid_sid": "Diese virtuelle Server-ID existiert auf dem Server nicht",
       "unknown": "Unerwarteter Fehler"
     },
     "abort": {
