@@ -16,6 +16,7 @@ Alle Sensoren hängen an einem Gerät „TeamSpeak &lt;host&gt;“:
 | `sensor.teamspeak_<host>_version` | Server-Version (Diagnose-Entität) |
 | `sensor.teamspeak_<host>_maximale_clients` | Maximal erlaubte Clients |
 | `sensor.teamspeak_<host>_verbundene_clients` | Anzahl verbundener Clients; die Namen stehen im Attribut `client_names` (Query-Clients werden herausgefiltert) |
+| `sensor.teamspeak_<host>_client_namen` | Die Namen der verbundenen Clients als Text (kommagetrennt), z. B. für die direkte Anzeige im Dashboard; `—` wenn niemand online ist |
 
 Abfrage-Intervall: alle 30 Sekunden.
 

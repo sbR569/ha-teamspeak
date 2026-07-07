@@ -48,7 +48,8 @@
       "online_since": { "name": "Online seit" },
       "version": { "name": "Version" },
       "max_clients": { "name": "Maximale Clients" },
-      "clients_online": { "name": "Verbundene Clients" }
+      "clients_online": { "name": "Verbundene Clients" },
+      "client_names": { "name": "Client-Namen" }
     }
   }
 }

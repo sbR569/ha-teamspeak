@@ -33,6 +33,16 @@ class TeamSpeakSensorDescription(SensorEntityDescription):
     attributes_fn: Callable[[TeamSpeakData], dict[str, Any]] | None = None
 
 
+def _client_names_state(data: TeamSpeakData) -> str:
+    """Join the client names for display; HA states are capped at 255 chars."""
+    if not data.client_names:
+        return "—"
+    joined = ", ".join(data.client_names)
+    if len(joined) > 255:
+        joined = joined[:252] + "…"
+    return joined
+
+
 SENSORS: tuple[TeamSpeakSensorDescription, ...] = (
     TeamSpeakSensorDescription(
         key="status",
@@ -65,6 +75,13 @@ SENSORS: tuple[TeamSpeakSensorDescription, ...] = (
         icon="mdi:account-voice",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data.clients_online,
+        attributes_fn=lambda data: {"client_names": data.client_names},
+    ),
+    TeamSpeakSensorDescription(
+        key="client_names",
+        translation_key="client_names",
+        icon="mdi:account-multiple-outline",
+        value_fn=_client_names_state,
         attributes_fn=lambda data: {"client_names": data.client_names},
     ),
 )
