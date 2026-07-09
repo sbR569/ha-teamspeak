@@ -44,13 +44,39 @@
   },
   "entity": {
     "sensor": {
-      "status": { "name": "Status" },
-      "online_since": { "name": "Online seit" },
-      "version": { "name": "Version" },
-      "max_clients": { "name": "Maximale Clients" },
-      "clients_online": { "name": "Verbundene Clients" },
-      "client_names": { "name": "Client-Namen" },
-      "channels": { "name": "Kanäle" }
+      "status": {
+        "name": "Status"
+      },
+      "online_since": {
+        "name": "Online seit"
+      },
+      "version": {
+        "name": "Version"
+      },
+      "max_clients": {
+        "name": "Maximale Clients"
+      },
+      "clients_online": {
+        "name": "Verbundene Clients"
+      },
+      "client_names": {
+        "name": "Client-Namen"
+      },
+      "channels": {
+        "name": "Kanäle"
+      },
+      "ping": {
+        "name": "Ping"
+      },
+      "packet_loss": {
+        "name": "Paketverlust"
+      },
+      "bandwidth_sent": {
+        "name": "Bandbreite gesendet"
+      },
+      "bandwidth_received": {
+        "name": "Bandbreite empfangen"
+      }
     }
   },
   "services": {
@@ -66,7 +92,10 @@
           "name": "Client-ID",
           "description": "Die clid des Clients (siehe Attribut 'clients' des Sensors „Verbundene Clients“)."
         },
-        "message": { "name": "Nachricht", "description": "Der Anstups-Text." }
+        "message": {
+          "name": "Nachricht",
+          "description": "Der Anstups-Text."
+        }
       }
     },
     "move_client": {
@@ -77,7 +106,10 @@
           "name": "Server",
           "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
         },
-        "client_id": { "name": "Client-ID", "description": "Die clid des Clients." },
+        "client_id": {
+          "name": "Client-ID",
+          "description": "Die clid des Clients."
+        },
         "channel_id": {
           "name": "Kanal-ID",
           "description": "Die cid des Zielkanals (siehe Attribut 'channels' des Sensors „Kanäle“)."
@@ -92,12 +124,18 @@
           "name": "Server",
           "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
         },
-        "client_id": { "name": "Client-ID", "description": "Die clid des Clients." },
+        "client_id": {
+          "name": "Client-ID",
+          "description": "Die clid des Clients."
+        },
         "scope": {
           "name": "Bereich",
           "description": "Aus dem aktuellen Kanal oder vom gesamten Server kicken."
         },
-        "reason": { "name": "Grund", "description": "Optionaler Grund, der dem Client angezeigt wird." }
+        "reason": {
+          "name": "Grund",
+          "description": "Optionaler Grund, der dem Client angezeigt wird."
+        }
       }
     },
     "ban_client": {
@@ -108,12 +146,18 @@
           "name": "Server",
           "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
         },
-        "client_id": { "name": "Client-ID", "description": "Die clid des Clients." },
+        "client_id": {
+          "name": "Client-ID",
+          "description": "Die clid des Clients."
+        },
         "duration": {
           "name": "Dauer",
           "description": "Bann-Dauer in Sekunden; 0 = dauerhaft."
         },
-        "reason": { "name": "Grund", "description": "Optionaler Bann-Grund." }
+        "reason": {
+          "name": "Grund",
+          "description": "Optionaler Bann-Grund."
+        }
       }
     },
     "send_message": {
@@ -124,8 +168,14 @@
           "name": "Server",
           "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
         },
-        "client_id": { "name": "Client-ID", "description": "Die clid des Clients." },
-        "message": { "name": "Nachricht", "description": "Der Nachrichtentext." }
+        "client_id": {
+          "name": "Client-ID",
+          "description": "Die clid des Clients."
+        },
+        "message": {
+          "name": "Nachricht",
+          "description": "Der Nachrichtentext."
+        }
       }
     },
     "broadcast_message": {
@@ -136,7 +186,10 @@
           "name": "Server",
           "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
         },
-        "message": { "name": "Nachricht", "description": "Der Nachrichtentext." }
+        "message": {
+          "name": "Nachricht",
+          "description": "Der Nachrichtentext."
+        }
       }
     }
   }

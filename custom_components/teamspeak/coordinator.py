@@ -49,6 +49,14 @@ _CONNECTION_ERRORS = (
 )
 
 
+def _info_float(info: dict[str, Any], key: str) -> float | None:
+    """Read a float field from serverinfo; None when absent or malformed."""
+    try:
+        return float(info[key])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 @dataclass
 class TeamSpeakData:
     """State of the TeamSpeak virtual server."""
@@ -62,6 +70,10 @@ class TeamSpeakData:
     channels: list[dict[str, Any]] = field(default_factory=list)
     clients: list[dict[str, Any]] = field(default_factory=list)
     query_clients: int = 0
+    ping: float | None = None
+    packet_loss: float | None = None
+    bandwidth_sent: int | None = None
+    bandwidth_received: int | None = None
 
 
 class TeamSpeakCoordinator(DataUpdateCoordinator[TeamSpeakData]):
@@ -210,6 +222,12 @@ class TeamSpeakCoordinator(DataUpdateCoordinator[TeamSpeakData]):
             info.get("virtualserver_version", "?"),
         )
 
+        ping = _info_float(info, "virtualserver_total_ping")
+        # TeamSpeak reports packet loss as a 0..1 fraction; expose percent.
+        loss = _info_float(info, "virtualserver_total_packetloss_total")
+        sent = _info_float(info, "connection_bandwidth_sent_last_second_total")
+        received = _info_float(info, "connection_bandwidth_received_last_second_total")
+
         return TeamSpeakData(
             status=status,
             online_since=online_since,
@@ -224,6 +242,10 @@ class TeamSpeakCoordinator(DataUpdateCoordinator[TeamSpeakData]):
             channels=channels,
             clients=clients,
             query_clients=query_clients,
+            ping=round(ping, 1) if ping is not None else None,
+            packet_loss=round(loss * 100, 2) if loss is not None else None,
+            bandwidth_sent=int(sent) if sent is not None else None,
+            bandwidth_received=int(received) if received is not None else None,
         )
 
     def _compute_online_since(

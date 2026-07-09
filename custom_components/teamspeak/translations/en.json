@@ -44,13 +44,39 @@
   },
   "entity": {
     "sensor": {
-      "status": { "name": "Status" },
-      "online_since": { "name": "Online since" },
-      "version": { "name": "Version" },
-      "max_clients": { "name": "Maximum clients" },
-      "clients_online": { "name": "Clients connected" },
-      "client_names": { "name": "Client names" },
-      "channels": { "name": "Channels" }
+      "status": {
+        "name": "Status"
+      },
+      "online_since": {
+        "name": "Online since"
+      },
+      "version": {
+        "name": "Version"
+      },
+      "max_clients": {
+        "name": "Maximum clients"
+      },
+      "clients_online": {
+        "name": "Clients connected"
+      },
+      "client_names": {
+        "name": "Client names"
+      },
+      "channels": {
+        "name": "Channels"
+      },
+      "ping": {
+        "name": "Ping"
+      },
+      "packet_loss": {
+        "name": "Packet loss"
+      },
+      "bandwidth_sent": {
+        "name": "Bandwidth sent"
+      },
+      "bandwidth_received": {
+        "name": "Bandwidth received"
+      }
     }
   },
   "services": {
@@ -66,7 +92,10 @@
           "name": "Client ID",
           "description": "The clid of the client (see the 'clients' attribute of the Clients connected sensor)."
         },
-        "message": { "name": "Message", "description": "The poke text." }
+        "message": {
+          "name": "Message",
+          "description": "The poke text."
+        }
       }
     },
     "move_client": {
@@ -77,7 +106,10 @@
           "name": "Server",
           "description": "The TeamSpeak server to act on (only needed if you have more than one)."
         },
-        "client_id": { "name": "Client ID", "description": "The clid of the client." },
+        "client_id": {
+          "name": "Client ID",
+          "description": "The clid of the client."
+        },
         "channel_id": {
           "name": "Channel ID",
           "description": "The cid of the target channel (see the 'channels' attribute of the Channels sensor)."
@@ -92,12 +124,18 @@
           "name": "Server",
           "description": "The TeamSpeak server to act on (only needed if you have more than one)."
         },
-        "client_id": { "name": "Client ID", "description": "The clid of the client." },
+        "client_id": {
+          "name": "Client ID",
+          "description": "The clid of the client."
+        },
         "scope": {
           "name": "Scope",
           "description": "Kick from the current channel or from the whole server."
         },
-        "reason": { "name": "Reason", "description": "Optional reason shown to the client." }
+        "reason": {
+          "name": "Reason",
+          "description": "Optional reason shown to the client."
+        }
       }
     },
     "ban_client": {
@@ -108,12 +146,18 @@
           "name": "Server",
           "description": "The TeamSpeak server to act on (only needed if you have more than one)."
         },
-        "client_id": { "name": "Client ID", "description": "The clid of the client." },
+        "client_id": {
+          "name": "Client ID",
+          "description": "The clid of the client."
+        },
         "duration": {
           "name": "Duration",
           "description": "Ban duration in seconds; 0 means permanent."
         },
-        "reason": { "name": "Reason", "description": "Optional ban reason." }
+        "reason": {
+          "name": "Reason",
+          "description": "Optional ban reason."
+        }
       }
     },
     "send_message": {
@@ -124,8 +168,14 @@
           "name": "Server",
           "description": "The TeamSpeak server to act on (only needed if you have more than one)."
         },
-        "client_id": { "name": "Client ID", "description": "The clid of the client." },
-        "message": { "name": "Message", "description": "The message text." }
+        "client_id": {
+          "name": "Client ID",
+          "description": "The clid of the client."
+        },
+        "message": {
+          "name": "Message",
+          "description": "The message text."
+        }
       }
     },
     "broadcast_message": {
@@ -136,7 +186,10 @@
           "name": "Server",
           "description": "The TeamSpeak server to act on (only needed if you have more than one)."
         },
-        "message": { "name": "Message", "description": "The message text." }
+        "message": {
+          "name": "Message",
+          "description": "The message text."
+        }
       }
     }
   }

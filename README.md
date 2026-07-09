@@ -21,8 +21,15 @@ Alle Sensoren hängen an einem Gerät „TeamSpeak &lt;host&gt;“:
 | `sensor.teamspeak_<host>_verbundene_clients` | Anzahl verbundener Clients. Attribut `client_names` (Namensliste) und **`clients`** (Detail-Liste je Client: `clid`, `cid`, Nickname, Land, Plattform, Version, Idle, Mute-/Talk-Flags, Servergruppen, IP …) |
 | `sensor.teamspeak_<host>_client_namen` | Die Namen der verbundenen Clients als Text (kommagetrennt); `—` wenn niemand online ist |
 | `sensor.teamspeak_<host>_kanale` | Anzahl echter Kanäle (ohne Spacer). Attribut **`channels`** = kompletter Channel-Baum (`cid`, `parent_id`, `order`, Name, Client-Zahl, Talk-Power, Flags, Spacer-Erkennung …) |
+| `sensor.teamspeak_<host>_ping` | Durchschnittlicher Ping aller Clients in ms |
+| `sensor.teamspeak_<host>_paketverlust` | Durchschnittlicher Paketverlust in % |
+| `sensor.teamspeak_<host>_bandbreite_gesendet` | Aktuell gesendete Bandbreite (letzte Sekunde); HA rechnet automatisch in kB/s um |
+| `sensor.teamspeak_<host>_bandbreite_empfangen` | Aktuell empfangene Bandbreite (letzte Sekunde) |
 
 Abfrage-Intervall: alle 30 Sekunden.
+
+> Ping, Paketverlust und Bandbreite stammen aus `serverinfo` und bleiben daher
+> mit einem TS6-`read`-Key `unbekannt` (siehe TS6-Hinweis bei der Einrichtung).
 
 Die Attribute `channels` und `clients` liefern die vollständigen, strukturierten
 Daten für ein Dashboard bzw. eine Custom Card (Channel-Baum wird aus `channels`

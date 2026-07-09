@@ -13,7 +13,13 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import CONF_HOST, EntityCategory
+from homeassistant.const import (
+    CONF_HOST,
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfDataRate,
+    UnitOfTime,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -104,6 +110,48 @@ SENSORS: tuple[TeamSpeakSensorDescription, ...] = (
         # 'channels' is the full tree (cid/parent_id/order + metadata); a card
         # combines it with the clients' 'cid' to render the channel viewer.
         attributes_fn=lambda data: {"channels": data.channels},
+    ),
+    # Connection quality / traffic (from serverinfo; unknown with a read-only
+    # TeamSpeak 6 API key, which is denied the serverinfo command).
+    TeamSpeakSensorDescription(
+        key="ping",
+        translation_key="ping",
+        icon="mdi:speedometer",
+        native_unit_of_measurement=UnitOfTime.MILLISECONDS,
+        suggested_display_precision=1,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.ping,
+    ),
+    TeamSpeakSensorDescription(
+        key="packet_loss",
+        translation_key="packet_loss",
+        icon="mdi:lan-disconnect",
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=2,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.packet_loss,
+    ),
+    TeamSpeakSensorDescription(
+        key="bandwidth_sent",
+        translation_key="bandwidth_sent",
+        icon="mdi:upload-network-outline",
+        device_class=SensorDeviceClass.DATA_RATE,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        suggested_unit_of_measurement=UnitOfDataRate.KILOBYTES_PER_SECOND,
+        suggested_display_precision=1,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.bandwidth_sent,
+    ),
+    TeamSpeakSensorDescription(
+        key="bandwidth_received",
+        translation_key="bandwidth_received",
+        icon="mdi:download-network-outline",
+        device_class=SensorDeviceClass.DATA_RATE,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        suggested_unit_of_measurement=UnitOfDataRate.KILOBYTES_PER_SECOND,
+        suggested_display_precision=1,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.bandwidth_received,
     ),
 )
 
