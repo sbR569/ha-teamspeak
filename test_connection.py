@@ -5,10 +5,10 @@ Zugangsdaten, Erreichbarkeit und den API-Key-Scope zu prüfen.
 
 Beispiele:
     # Klassisches ServerQuery (Passwort wird abgefragt):
-    python test_connection.py 10.1.255.51
+    python test_connection.py <host>
 
     # WebQuery mit API-Key:
-    python test_connection.py 10.1.255.51 --api-key DEIN_API_KEY --sid 6
+    python test_connection.py <host> --api-key DEIN_API_KEY --sid 1
 """
 
 import argparse

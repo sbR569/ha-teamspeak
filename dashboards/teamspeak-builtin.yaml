@@ -5,25 +5,25 @@ path: teamspeak-basic
 icon: mdi:headset
 cards:
   - type: glance
-    title: Budenzauber
+    title: Mein TeamSpeak
     entities:
-      - entity: sensor.teamspeak_10_1_255_51_status
+      - entity: sensor.teamspeak_meinserver_status
         name: Status
-      - entity: sensor.teamspeak_10_1_255_51_online_seit
+      - entity: sensor.teamspeak_meinserver_online_seit
         name: Online seit
-      - entity: sensor.teamspeak_10_1_255_51_verbundene_clients
+      - entity: sensor.teamspeak_meinserver_verbundene_clients
         name: Clients
-      - entity: sensor.teamspeak_10_1_255_51_maximale_clients
+      - entity: sensor.teamspeak_meinserver_maximale_clients
         name: Max
-      - entity: sensor.teamspeak_10_1_255_51_version
+      - entity: sensor.teamspeak_meinserver_version
         name: Version
 
   # Channel-Baum mit Clients (Spacer werden ausgeblendet)
   - type: markdown
     title: Channel-Übersicht
     content: |-
-      {%- set channels = state_attr('sensor.teamspeak_10_1_255_51_kanale', 'channels') or [] -%}
-      {%- set clients = state_attr('sensor.teamspeak_10_1_255_51_verbundene_clients', 'clients') or [] -%}
+      {%- set channels = state_attr('sensor.teamspeak_meinserver_kanale', 'channels') or [] -%}
+      {%- set clients = state_attr('sensor.teamspeak_meinserver_verbundene_clients', 'clients') or [] -%}
       {%- set ns = namespace(pairs=[]) -%}
       {%- for ch in channels -%}
       {%- set d = 0 if ch.parent_id == 0 else (dict(ns.pairs).get(ch.parent_id, 0) + 1) -%}
@@ -41,7 +41,7 @@ cards:
   - type: markdown
     title: Wer ist online?
     content: |-
-      {%- set clients = state_attr('sensor.teamspeak_10_1_255_51_verbundene_clients', 'clients') or [] -%}
+      {%- set clients = state_attr('sensor.teamspeak_meinserver_verbundene_clients', 'clients') or [] -%}
       {%- if clients -%}
       | | Name | Land | Plattform | Idle |
       |---|---|---|---|---|
@@ -56,4 +56,4 @@ cards:
     title: Clients (24 h)
     hours_to_show: 24
     entities:
-      - sensor.teamspeak_10_1_255_51_verbundene_clients
+      - sensor.teamspeak_meinserver_verbundene_clients

@@ -221,7 +221,7 @@ Oder zur Laufzeit über **Einstellungen → Geräte & Dienste → TeamSpeak Serv
 ## Dashboard
 
 Im Ordner [`dashboards/`](dashboards/) liegen zwei fertige Ansichten. Die
-Entity-IDs darin sind für einen Server unter `10.1.255.51` vorbereitet — bei
+Entity-IDs darin nutzen den Platzhalter `meinserver` — bei
 anderem Host anpassen (die tatsächlichen IDs zeigen die **Entwicklerwerkzeuge →
 Zustände**, Filter „teamspeak").
 
@@ -249,11 +249,11 @@ Installation:
 
 ```yaml
 type: custom:teamspeak-viewer-card
-title: Budenzauber
-channels_entity: sensor.teamspeak_10_1_255_51_kanale
-clients_entity: sensor.teamspeak_10_1_255_51_verbundene_clients
-status_entity: sensor.teamspeak_10_1_255_51_status
-max_clients_entity: sensor.teamspeak_10_1_255_51_maximale_clients
+title: Mein TeamSpeak
+channels_entity: sensor.teamspeak_meinserver_kanale
+clients_entity: sensor.teamspeak_meinserver_verbundene_clients
+status_entity: sensor.teamspeak_meinserver_status
+max_clients_entity: sensor.teamspeak_meinserver_maximale_clients
 show_spacers: true    # Spacer anzeigen
 show_actions: true    # Klick-Aktionen (false = reine Anzeige)
 max_height: 560       # optional, px

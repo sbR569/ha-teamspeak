@@ -6,25 +6,25 @@ path: teamspeak
 icon: mdi:headset
 cards:
   - type: glance
-    title: Budenzauber
+    title: Mein TeamSpeak
     entities:
-      - entity: sensor.teamspeak_10_1_255_51_status
+      - entity: sensor.teamspeak_meinserver_status
         name: Status
-      - entity: sensor.teamspeak_10_1_255_51_online_seit
+      - entity: sensor.teamspeak_meinserver_online_seit
         name: Online seit
-      - entity: sensor.teamspeak_10_1_255_51_verbundene_clients
+      - entity: sensor.teamspeak_meinserver_verbundene_clients
         name: Clients
-      - entity: sensor.teamspeak_10_1_255_51_maximale_clients
+      - entity: sensor.teamspeak_meinserver_maximale_clients
         name: Max
-      - entity: sensor.teamspeak_10_1_255_51_version
+      - entity: sensor.teamspeak_meinserver_version
         name: Version
 
   - type: custom:teamspeak-viewer-card
-    title: Budenzauber
-    channels_entity: sensor.teamspeak_10_1_255_51_kanale
-    clients_entity: sensor.teamspeak_10_1_255_51_verbundene_clients
-    status_entity: sensor.teamspeak_10_1_255_51_status
-    max_clients_entity: sensor.teamspeak_10_1_255_51_maximale_clients
+    title: Mein TeamSpeak
+    channels_entity: sensor.teamspeak_meinserver_kanale
+    clients_entity: sensor.teamspeak_meinserver_verbundene_clients
+    status_entity: sensor.teamspeak_meinserver_status
+    max_clients_entity: sensor.teamspeak_meinserver_maximale_clients
     show_spacers: true
     show_actions: true
     max_height: 560
@@ -33,4 +33,4 @@ cards:
     title: Clients (24 h)
     hours_to_show: 24
     entities:
-      - sensor.teamspeak_10_1_255_51_verbundene_clients
+      - sensor.teamspeak_meinserver_verbundene_clients

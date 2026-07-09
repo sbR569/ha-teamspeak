@@ -8,7 +8,7 @@
  *   clients_entity: sensor.teamspeak_<host>_verbundene_clients
  *
  * Optional:
- *   title: Budenzauber
+ *   title: Mein TeamSpeak
  *   status_entity: sensor.teamspeak_<host>_status
  *   max_clients_entity: sensor.teamspeak_<host>_maximale_clients
  *   show_spacers: true      # Spacer-Kanäle als Trenner rendern
