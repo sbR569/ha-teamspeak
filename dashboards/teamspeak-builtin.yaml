@@ -1,0 +1,59 @@
+# Variante B: nur HA-Bordmittel (keine Custom Card nötig) — komplette Ansicht.
+# Entity-IDs ggf. anpassen (Entwicklerwerkzeuge -> Zustände, nach "teamspeak" filtern).
+title: TeamSpeak
+path: teamspeak-basic
+icon: mdi:headset
+cards:
+  - type: glance
+    title: Budenzauber
+    entities:
+      - entity: sensor.teamspeak_10_1_255_51_status
+        name: Status
+      - entity: sensor.teamspeak_10_1_255_51_online_seit
+        name: Online seit
+      - entity: sensor.teamspeak_10_1_255_51_verbundene_clients
+        name: Clients
+      - entity: sensor.teamspeak_10_1_255_51_maximale_clients
+        name: Max
+      - entity: sensor.teamspeak_10_1_255_51_version
+        name: Version
+
+  # Channel-Baum mit Clients (Spacer werden ausgeblendet)
+  - type: markdown
+    title: Channel-Übersicht
+    content: |-
+      {%- set channels = state_attr('sensor.teamspeak_10_1_255_51_kanale', 'channels') or [] -%}
+      {%- set clients = state_attr('sensor.teamspeak_10_1_255_51_verbundene_clients', 'clients') or [] -%}
+      {%- set ns = namespace(pairs=[]) -%}
+      {%- for ch in channels -%}
+      {%- set d = 0 if ch.parent_id == 0 else (dict(ns.pairs).get(ch.parent_id, 0) + 1) -%}
+      {%- set ns.pairs = ns.pairs + [(ch.cid, d)] -%}
+      {%- if not ch.is_spacer %}
+      {{ '&nbsp;' * (d * 4) }}🔊 **{{ ch.name }}**{% if ch.clients %} · {{ ch.clients }}{% endif %}<br>
+      {%- for c in clients if c.cid == ch.cid %}
+      {{ '&nbsp;' * ((d + 1) * 4) }}{{ '💤' if c.away else ('🎙️🚫' if c.input_muted else ('🔇' if c.output_muted else '🟢')) }} {{ c.nickname }}{% if c.country %} ({{ c.country }}){% endif %}<br>
+      {%- endfor -%}
+      {%- endif -%}
+      {%- endfor -%}
+      {%- if not channels %}_Server offline oder keine Daten._{% endif %}
+
+  # Wer ist online — mit Details
+  - type: markdown
+    title: Wer ist online?
+    content: |-
+      {%- set clients = state_attr('sensor.teamspeak_10_1_255_51_verbundene_clients', 'clients') or [] -%}
+      {%- if clients -%}
+      | | Name | Land | Plattform | Idle |
+      |---|---|---|---|---|
+      {% for c in clients -%}
+      | {{ '💤' if c.away else ('🎙️🚫' if c.input_muted else '🟢') }} | {{ c.nickname }} | {{ c.country or '?' }} | {{ c.platform }} | {{ (c.idle_seconds // 60) }} min |
+      {% endfor -%}
+      {%- else -%}
+      _Niemand online._
+      {%- endif %}
+
+  - type: history-graph
+    title: Clients (24 h)
+    hours_to_show: 24
+    entities:
+      - sensor.teamspeak_10_1_255_51_verbundene_clients

@@ -1,0 +1,36 @@
+# Variante A: Custom Card (ts3.app-Look) — komplette Dashboard-Ansicht.
+# Voraussetzung: www/teamspeak-viewer-card.js als Ressource eingebunden (s. README).
+# Entity-IDs ggf. anpassen (Entwicklerwerkzeuge -> Zustände, nach "teamspeak" filtern).
+title: TeamSpeak
+path: teamspeak
+icon: mdi:headset
+cards:
+  - type: glance
+    title: Budenzauber
+    entities:
+      - entity: sensor.teamspeak_10_1_255_51_status
+        name: Status
+      - entity: sensor.teamspeak_10_1_255_51_online_seit
+        name: Online seit
+      - entity: sensor.teamspeak_10_1_255_51_verbundene_clients
+        name: Clients
+      - entity: sensor.teamspeak_10_1_255_51_maximale_clients
+        name: Max
+      - entity: sensor.teamspeak_10_1_255_51_version
+        name: Version
+
+  - type: custom:teamspeak-viewer-card
+    title: Budenzauber
+    channels_entity: sensor.teamspeak_10_1_255_51_kanale
+    clients_entity: sensor.teamspeak_10_1_255_51_verbundene_clients
+    status_entity: sensor.teamspeak_10_1_255_51_status
+    max_clients_entity: sensor.teamspeak_10_1_255_51_maximale_clients
+    show_spacers: true
+    show_actions: true
+    max_height: 560
+
+  - type: history-graph
+    title: Clients (24 h)
+    hours_to_show: 24
+    entities:
+      - sensor.teamspeak_10_1_255_51_verbundene_clients

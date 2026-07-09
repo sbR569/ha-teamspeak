@@ -209,19 +209,62 @@ logger:
 Oder zur Laufzeit über **Einstellungen → Geräte & Dienste → TeamSpeak Server →
 „Debug-Protokollierung aktivieren“**.
 
-## Beispiel: Client-Namen im Dashboard anzeigen
+## Dashboard
 
-Markdown-Karte:
+Im Ordner [`dashboards/`](dashboards/) liegen zwei fertige Ansichten. Die
+Entity-IDs darin sind für einen Server unter `10.1.255.51` vorbereitet — bei
+anderem Host anpassen (die tatsächlichen IDs zeigen die **Entwicklerwerkzeuge →
+Zustände**, Filter „teamspeak").
+
+### Variante A: TeamSpeak Viewer Card (ts3.app-Look)
+
+Eine eigene Lovelace-Karte ([`www/teamspeak-viewer-card.js`](www/teamspeak-viewer-card.js)),
+die den Channel-Baum wie im TeamSpeak-Client rendert:
+
+- Kanäle hierarchisch eingerückt, Spacer als Trenner, Passwort-Schloss, Client-Zahl
+- Clients mit Status-Icon (spricht 🟢 / Mikro aus / Ton aus / abwesend), Länder-Flagge,
+  Idle-Zeit, Aufnahme-/Channel-Commander-Badges
+- **Klick auf einen Client** öffnet die Aktionsleiste: Anstupsen, Nachricht,
+  Verschieben (dann Zielkanal anklicken), Kick (Kanal/Server), Bannen —
+  destruktive Aktionen mit Bestätigungsdialog
+- Megafon-Button im Header für Rundnachrichten
+- Folgt automatisch dem HA-Theme (hell/dunkel)
+
+Installation:
+
+1. `www/teamspeak-viewer-card.js` nach `config/www/` kopieren.
+2. **Einstellungen → Dashboards → ⋮ → Ressourcen → Ressource hinzufügen**:
+   URL `/local/teamspeak-viewer-card.js`, Typ **JavaScript-Modul**.
+3. Karte hinzufügen (die Karte erscheint auch im Karten-Picker als
+   „TeamSpeak Viewer Card"):
 
 ```yaml
-type: markdown
-content: >-
-  **TeamSpeak ({{ states('sensor.teamspeak_<host>_verbundene_clients') }} online)**
-
-  {% for name in state_attr('sensor.teamspeak_<host>_verbundene_clients', 'client_names') or [] %}
-  - {{ name }}
-  {% endfor %}
+type: custom:teamspeak-viewer-card
+title: Budenzauber
+channels_entity: sensor.teamspeak_10_1_255_51_kanale
+clients_entity: sensor.teamspeak_10_1_255_51_verbundene_clients
+status_entity: sensor.teamspeak_10_1_255_51_status
+max_clients_entity: sensor.teamspeak_10_1_255_51_maximale_clients
+show_spacers: true    # Spacer anzeigen
+show_actions: true    # Klick-Aktionen (false = reine Anzeige)
+max_height: 560       # optional, px
 ```
+
+Die komplette Ansicht (inkl. Kopfzeile und Verlaufsgraph):
+[`dashboards/teamspeak-custom-card.yaml`](dashboards/teamspeak-custom-card.yaml) —
+Inhalt über **Dashboard → ⋮ → Raw-Konfigurationseditor** als neue View einfügen.
+
+> Die Aktionen rufen die `teamspeak.*`-Services auf und brauchen daher einen
+> API-Key mit `scope=write`/`manage`. Mit `show_actions: false` ist die Karte
+> ein reiner Viewer und funktioniert auch mit einem read-Key.
+
+### Variante B: Nur HA-Bordmittel
+
+[`dashboards/teamspeak-builtin.yaml`](dashboards/teamspeak-builtin.yaml) —
+komplette View ohne Custom Card: Glance-Kopfzeile, Channel-Baum als
+Markdown-Template (Spacer werden ausgeblendet), „Wer ist online?"-Tabelle
+(Status, Land, Plattform, Idle) und ein 24-h-Verlaufsgraph. Einfach in den
+Raw-Konfigurationseditor einfügen — fertig.
 
 ## Beispiel: Automatisierung bei Client-Verbindung
 
