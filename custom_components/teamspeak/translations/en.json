@@ -11,7 +11,7 @@
       },
       "webquery": {
         "title": "TeamSpeak WebQuery",
-        "description": "WebQuery must be enabled on the server (query_protocols=raw,http). Create an API key with the ServerQuery command: apikeyadd scope=read lifetime=0",
+        "description": "WebQuery must be enabled on the server (query_protocols=raw,http). Create an API key with the ServerQuery command: apikeyadd scope=manage lifetime=0 (scope=read is enough for monitoring, but management actions need write/manage).",
         "data": {
           "host": "Host",
           "port": "WebQuery port",
@@ -49,7 +49,95 @@
       "version": { "name": "Version" },
       "max_clients": { "name": "Maximum clients" },
       "clients_online": { "name": "Clients connected" },
-      "client_names": { "name": "Client names" }
+      "client_names": { "name": "Client names" },
+      "channels": { "name": "Channels" }
+    }
+  },
+  "services": {
+    "poke_client": {
+      "name": "Poke client",
+      "description": "Sends a poke (pop-up alert) to a connected client.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "client_id": {
+          "name": "Client ID",
+          "description": "The clid of the client (see the 'clients' attribute of the Clients connected sensor)."
+        },
+        "message": { "name": "Message", "description": "The poke text." }
+      }
+    },
+    "move_client": {
+      "name": "Move client",
+      "description": "Moves a client into another channel.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "client_id": { "name": "Client ID", "description": "The clid of the client." },
+        "channel_id": {
+          "name": "Channel ID",
+          "description": "The cid of the target channel (see the 'channels' attribute of the Channels sensor)."
+        }
+      }
+    },
+    "kick_client": {
+      "name": "Kick client",
+      "description": "Kicks a client from its channel or from the server.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "client_id": { "name": "Client ID", "description": "The clid of the client." },
+        "scope": {
+          "name": "Scope",
+          "description": "Kick from the current channel or from the whole server."
+        },
+        "reason": { "name": "Reason", "description": "Optional reason shown to the client." }
+      }
+    },
+    "ban_client": {
+      "name": "Ban client",
+      "description": "Bans a client from the server.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "client_id": { "name": "Client ID", "description": "The clid of the client." },
+        "duration": {
+          "name": "Duration",
+          "description": "Ban duration in seconds; 0 means permanent."
+        },
+        "reason": { "name": "Reason", "description": "Optional ban reason." }
+      }
+    },
+    "send_message": {
+      "name": "Send message to client",
+      "description": "Sends a private text message to a connected client.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "client_id": { "name": "Client ID", "description": "The clid of the client." },
+        "message": { "name": "Message", "description": "The message text." }
+      }
+    },
+    "broadcast_message": {
+      "name": "Broadcast message",
+      "description": "Sends a text message to everyone on the virtual server.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "message": { "name": "Message", "description": "The message text." }
+      }
     }
   }
 }

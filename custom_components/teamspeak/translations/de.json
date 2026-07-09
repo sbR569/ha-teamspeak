@@ -11,7 +11,7 @@
       },
       "webquery": {
         "title": "TeamSpeak WebQuery",
-        "description": "WebQuery muss auf dem Server aktiviert sein (query_protocols=raw,http). API-Key erstellen mit dem ServerQuery-Befehl: apikeyadd scope=read lifetime=0",
+        "description": "WebQuery muss auf dem Server aktiviert sein (query_protocols=raw,http). API-Key erstellen mit dem ServerQuery-Befehl: apikeyadd scope=manage lifetime=0 (scope=read reicht fürs Monitoring, Verwaltungsaktionen brauchen write/manage).",
         "data": {
           "host": "Host",
           "port": "WebQuery-Port",
@@ -49,7 +49,95 @@
       "version": { "name": "Version" },
       "max_clients": { "name": "Maximale Clients" },
       "clients_online": { "name": "Verbundene Clients" },
-      "client_names": { "name": "Client-Namen" }
+      "client_names": { "name": "Client-Namen" },
+      "channels": { "name": "Kanäle" }
+    }
+  },
+  "services": {
+    "poke_client": {
+      "name": "Client anstupsen",
+      "description": "Sendet einem verbundenen Client einen Anstupser (Pop-up-Hinweis).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "client_id": {
+          "name": "Client-ID",
+          "description": "Die clid des Clients (siehe Attribut 'clients' des Sensors „Verbundene Clients“)."
+        },
+        "message": { "name": "Nachricht", "description": "Der Anstups-Text." }
+      }
+    },
+    "move_client": {
+      "name": "Client verschieben",
+      "description": "Verschiebt einen Client in einen anderen Kanal.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "client_id": { "name": "Client-ID", "description": "Die clid des Clients." },
+        "channel_id": {
+          "name": "Kanal-ID",
+          "description": "Die cid des Zielkanals (siehe Attribut 'channels' des Sensors „Kanäle“)."
+        }
+      }
+    },
+    "kick_client": {
+      "name": "Client kicken",
+      "description": "Kickt einen Client aus seinem Kanal oder vom Server.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "client_id": { "name": "Client-ID", "description": "Die clid des Clients." },
+        "scope": {
+          "name": "Bereich",
+          "description": "Aus dem aktuellen Kanal oder vom gesamten Server kicken."
+        },
+        "reason": { "name": "Grund", "description": "Optionaler Grund, der dem Client angezeigt wird." }
+      }
+    },
+    "ban_client": {
+      "name": "Client bannen",
+      "description": "Bannt einen Client vom Server.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "client_id": { "name": "Client-ID", "description": "Die clid des Clients." },
+        "duration": {
+          "name": "Dauer",
+          "description": "Bann-Dauer in Sekunden; 0 = dauerhaft."
+        },
+        "reason": { "name": "Grund", "description": "Optionaler Bann-Grund." }
+      }
+    },
+    "send_message": {
+      "name": "Nachricht an Client senden",
+      "description": "Sendet einem verbundenen Client eine private Textnachricht.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "client_id": { "name": "Client-ID", "description": "Die clid des Clients." },
+        "message": { "name": "Nachricht", "description": "Der Nachrichtentext." }
+      }
+    },
+    "broadcast_message": {
+      "name": "Rundnachricht senden",
+      "description": "Sendet eine Textnachricht an alle auf dem virtuellen Server.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "message": { "name": "Nachricht", "description": "Der Nachrichtentext." }
+      }
     }
   }
 }

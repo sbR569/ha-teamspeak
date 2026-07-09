@@ -43,6 +43,11 @@ def _client_names_state(data: TeamSpeakData) -> str:
     return joined
 
 
+def _real_channel_count(data: TeamSpeakData) -> int:
+    """Number of channels that are not spacers."""
+    return sum(1 for channel in data.channels if not channel["is_spacer"])
+
+
 SENSORS: tuple[TeamSpeakSensorDescription, ...] = (
     TeamSpeakSensorDescription(
         key="status",
@@ -75,7 +80,13 @@ SENSORS: tuple[TeamSpeakSensorDescription, ...] = (
         icon="mdi:account-voice",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data.clients_online,
-        attributes_fn=lambda data: {"client_names": data.client_names},
+        # 'clients' carries the full per-client detail (channel, country,
+        # platform, idle, mute flags, groups...) for a dashboard/custom card.
+        attributes_fn=lambda data: {
+            "client_names": data.client_names,
+            "clients": data.clients,
+            "query_clients": data.query_clients,
+        },
     ),
     TeamSpeakSensorDescription(
         key="client_names",
@@ -83,6 +94,16 @@ SENSORS: tuple[TeamSpeakSensorDescription, ...] = (
         icon="mdi:account-multiple-outline",
         value_fn=_client_names_state,
         attributes_fn=lambda data: {"client_names": data.client_names},
+    ),
+    TeamSpeakSensorDescription(
+        key="channels",
+        translation_key="channels",
+        icon="mdi:format-list-bulleted-type",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_real_channel_count,
+        # 'channels' is the full tree (cid/parent_id/order + metadata); a card
+        # combines it with the clients' 'cid' to render the channel viewer.
+        attributes_fn=lambda data: {"channels": data.channels},
     ),
 )
 

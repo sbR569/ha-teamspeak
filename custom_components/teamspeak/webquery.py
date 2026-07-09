@@ -3,8 +3,9 @@
 WebQuery is available on TeamSpeak 3 servers since 3.12.0 and on the new
 TeamSpeak Server, but must be enabled explicitly (ts3server.ini:
 ``query_protocols=raw,http`` / Docker: ``TS3SERVER_QUERY_PROTOCOLS=raw,http``).
-API keys are created with the ServerQuery command
-``apikeyadd scope=read lifetime=0``.
+API keys are created with the ServerQuery command ``apikeyadd``. Read access
+(``scope=read``) is enough for monitoring; management commands need
+``scope=write`` or ``scope=manage``.
 """
 
 from __future__ import annotations
@@ -14,10 +15,14 @@ from typing import Any
 
 import aiohttp
 
+from .model import CHANNELLIST_OPTIONS, CLIENTLIST_OPTIONS
+
 _LOGGER = logging.getLogger(__name__)
 
 # WebQuery error codes that indicate a bad, expired or under-privileged API key.
 _AUTH_ERROR_CODES = {401, 403, 5122, 5124, 5125, 5126, 5127}
+# Error code returned when the key is valid but lacks the required permission.
+ERROR_INSUFFICIENT_RIGHTS = 2568
 
 
 class WebQueryError(Exception):
@@ -33,6 +38,19 @@ class WebQueryError(Exception):
         """Return True if the error points to a bad API key."""
         return self.code in _AUTH_ERROR_CODES or "apikey" in self.message.lower()
 
+    @property
+    def is_permission_error(self) -> bool:
+        """Return True if the key is valid but lacks the needed scope."""
+        return self.code == ERROR_INSUFFICIENT_RIGHTS or "insufficient" in (
+            self.message.lower()
+        )
+
+
+def _options_query(options: str) -> str:
+    """Turn '-uid -away' into the WebQuery query string '?-uid&-away'."""
+    flags = options.split()
+    return "?" + "&".join(flags) if flags else ""
+
 
 async def _request(
     session: aiohttp.ClientSession,
@@ -40,13 +58,15 @@ async def _request(
     api_key: str,
     command: str,
     timeout: float,
+    params: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Run one WebQuery command and return the body items."""
     url = f"{base_url}/{command}"
-    _LOGGER.debug("WebQuery request: GET %s", url)
+    _LOGGER.debug("WebQuery request: GET %s params=%s", url, params)
     async with session.get(
         url,
         headers={"x-api-key": api_key},
+        params=params,
         timeout=aiohttp.ClientTimeout(total=timeout),
     ) as resp:
         if resp.status in (401, 403):
@@ -75,11 +95,7 @@ async def fetch_server_data_webquery(
     use_ssl: bool = False,
     timeout: float = 10.0,
 ) -> dict[str, Any]:
-    """Fetch serverinfo + client list via WebQuery.
-
-    Returns the same shape as ts3query.fetch_server_data():
-    {"serverinfo": {...}, "client_names": [...]} with query clients filtered.
-    """
+    """Fetch serverinfo, channel list and detailed client list via WebQuery."""
     scheme = "https" if use_ssl else "http"
     root_url = f"{scheme}://{host}:{port}"
     base_url = f"{root_url}/{sid}"
@@ -94,14 +110,13 @@ async def fetch_server_data_webquery(
     except WebQueryError as err:
         if not err.is_auth_error:
             raise
-        # The TeamSpeak 6 server denies 'serverinfo' to read-scope API keys
-        # while 'clientlist' and 'version' keep working. Degrade gracefully:
-        # a succeeding clientlist proves the server is online, and 'version'
-        # still yields the server version.
+        # TeamSpeak 6 denies 'serverinfo' to read-scope API keys while
+        # 'clientlist', 'channellist' and 'version' keep working. Degrade
+        # gracefully: a succeeding clientlist proves the server is online.
         serverinfo_denied = True
         _LOGGER.debug(
             "'serverinfo' denied for this API key (%s); falling back to "
-            "'version' + 'clientlist' only",
+            "'version' for the server version",
             err,
         )
         version_items = await _request(session, root_url, api_key, "version", timeout)
@@ -109,18 +124,36 @@ async def fetch_server_data_webquery(
             serverinfo["virtualserver_version"] = version_items[0].get("version")
         serverinfo["virtualserver_status"] = "online"
 
-    clientlist = await _request(session, base_url, api_key, "clientlist", timeout)
-
-    client_names = sorted(
-        (
-            item.get("client_nickname", "")
-            for item in clientlist
-            if str(item.get("client_type", "0")) == "0"
-        ),
-        key=str.casefold,
+    channels = await _request(
+        session, base_url, api_key, f"channellist{_options_query(CHANNELLIST_OPTIONS)}", timeout
     )
+    clients = await _request(
+        session, base_url, api_key, f"clientlist{_options_query(CLIENTLIST_OPTIONS)}", timeout
+    )
+
     return {
         "serverinfo": serverinfo,
-        "client_names": client_names,
         "serverinfo_denied": serverinfo_denied,
+        "channels": channels,
+        "clients": clients,
     }
+
+
+async def execute_command_webquery(
+    session: aiohttp.ClientSession,
+    host: str,
+    port: int,
+    api_key: str,
+    sid: int,
+    command: str,
+    params: dict[str, Any],
+    use_ssl: bool = False,
+    timeout: float = 10.0,
+) -> list[dict[str, Any]]:
+    """Run a management command (e.g. clientmove, clientkick) via WebQuery."""
+    scheme = "https" if use_ssl else "http"
+    base_url = f"{scheme}://{host}:{port}/{sid}"
+    _LOGGER.debug("WebQuery command %r params=%s", command, params)
+    # aiohttp needs string values for query parameters.
+    str_params = {key: str(value) for key, value in params.items()}
+    return await _request(session, base_url, api_key, command, timeout, str_params)

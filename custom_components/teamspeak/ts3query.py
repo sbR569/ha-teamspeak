@@ -162,6 +162,14 @@ class TS3QueryClient:
         self._writer = None
 
 
+def _build_command(command: str, params: dict[str, Any]) -> str:
+    """Build a raw ServerQuery command line with escaped parameters."""
+    parts = [command]
+    for key, value in params.items():
+        parts.append(f"{key}={escape(str(value))}")
+    return " ".join(parts)
+
+
 async def fetch_server_data(
     host: str,
     port: int,
@@ -170,27 +178,56 @@ async def fetch_server_data(
     sid: int,
     timeout: float = 10.0,
 ) -> dict[str, Any]:
-    """Log in, select the virtual server and fetch serverinfo + client list.
+    """Log in, select the virtual server and fetch serverinfo, channels and
+    the detailed client list."""
+    from .model import CHANNELLIST_OPTIONS, CLIENTLIST_OPTIONS
 
-    Returns {"serverinfo": {...}, "client_names": [...]} where client_names
-    only contains real voice clients (client_type=0), i.e. no query clients.
-    """
+    client = TS3QueryClient(host, port, timeout)
+    await client.connect()
+    serverinfo: dict[str, Any] = {}
+    serverinfo_denied = False
+    try:
+        await client.command(f"login {escape(username)} {escape(password)}")
+        await client.command(f"use sid={sid}")
+        try:
+            serverinfo = (await client.command("serverinfo"))[0]
+        except TS3QueryError as err:
+            # Mirror the WebQuery behaviour for low-privilege query logins.
+            serverinfo_denied = True
+            _LOGGER.debug("'serverinfo' denied (%s); using 'version' instead", err)
+            version = await client.command("version")
+            if version:
+                serverinfo["virtualserver_version"] = version[0].get("version")
+            serverinfo["virtualserver_status"] = "online"
+        channels = await client.command(f"channellist {CHANNELLIST_OPTIONS}")
+        clients = await client.command(f"clientlist {CLIENTLIST_OPTIONS}")
+    finally:
+        await client.close()
+
+    return {
+        "serverinfo": serverinfo,
+        "serverinfo_denied": serverinfo_denied,
+        "channels": channels,
+        "clients": clients,
+    }
+
+
+async def execute_command_raw(
+    host: str,
+    port: int,
+    username: str,
+    password: str,
+    sid: int,
+    command: str,
+    params: dict[str, Any],
+    timeout: float = 10.0,
+) -> list[dict[str, str]]:
+    """Run a management command (e.g. clientmove, clientkick) via ServerQuery."""
     client = TS3QueryClient(host, port, timeout)
     await client.connect()
     try:
         await client.command(f"login {escape(username)} {escape(password)}")
         await client.command(f"use sid={sid}")
-        serverinfo = (await client.command("serverinfo"))[0]
-        clientlist = await client.command("clientlist")
+        return await client.command(_build_command(command, params))
     finally:
         await client.close()
-
-    client_names = sorted(
-        (
-            item.get("client_nickname", "")
-            for item in clientlist
-            if item.get("client_type") == "0"
-        ),
-        key=str.casefold,
-    )
-    return {"serverinfo": serverinfo, "client_names": client_names}

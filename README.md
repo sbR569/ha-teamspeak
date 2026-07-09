@@ -1,9 +1,12 @@
 # TeamSpeak Server – Home Assistant Integration
 
-Custom Integration, die einen selbst gehosteten TeamSpeak-Server über die
-**ServerQuery-Schnittstelle** (raw/telnet, Standard-Port `10011`) abfragt.
-Funktioniert mit TeamSpeak 3 Servern und dem neuen TeamSpeak Server, keine
-zusätzlichen Python-Abhängigkeiten nötig.
+Custom Integration für selbst gehostete TeamSpeak-Server. Fragt den Server über
+die **WebQuery HTTP-API** (API-Key, empfohlen) oder die klassische
+**ServerQuery-Schnittstelle** (raw/telnet) ab und stellt Status, Channel-Baum
+und detaillierte Client-Infos bereit — plus **Verwaltungsaktionen**
+(verschieben, kicken, bannen, anstupsen, Nachrichten). Damit lässt sich ein
+Dashboard im Stil von ts3.app / ts3manager bauen. Funktioniert mit TeamSpeak 3
+Servern und dem neuen TeamSpeak-6-Server, ohne zusätzliche Python-Abhängigkeiten.
 
 ## Sensoren
 
@@ -15,10 +18,56 @@ Alle Sensoren hängen an einem Gerät „TeamSpeak &lt;host&gt;“:
 | `sensor.teamspeak_<host>_online_seit` | Zeitstempel, seit wann der Server läuft |
 | `sensor.teamspeak_<host>_version` | Server-Version (Diagnose-Entität) |
 | `sensor.teamspeak_<host>_maximale_clients` | Maximal erlaubte Clients |
-| `sensor.teamspeak_<host>_verbundene_clients` | Anzahl verbundener Clients; die Namen stehen im Attribut `client_names` (Query-Clients werden herausgefiltert) |
-| `sensor.teamspeak_<host>_client_namen` | Die Namen der verbundenen Clients als Text (kommagetrennt), z. B. für die direkte Anzeige im Dashboard; `—` wenn niemand online ist |
+| `sensor.teamspeak_<host>_verbundene_clients` | Anzahl verbundener Clients. Attribut `client_names` (Namensliste) und **`clients`** (Detail-Liste je Client: `clid`, `cid`, Nickname, Land, Plattform, Version, Idle, Mute-/Talk-Flags, Servergruppen, IP …) |
+| `sensor.teamspeak_<host>_client_namen` | Die Namen der verbundenen Clients als Text (kommagetrennt); `—` wenn niemand online ist |
+| `sensor.teamspeak_<host>_kanale` | Anzahl echter Kanäle (ohne Spacer). Attribut **`channels`** = kompletter Channel-Baum (`cid`, `parent_id`, `order`, Name, Client-Zahl, Talk-Power, Flags, Spacer-Erkennung …) |
 
 Abfrage-Intervall: alle 30 Sekunden.
+
+Die Attribute `channels` und `clients` liefern die vollständigen, strukturierten
+Daten für ein Dashboard bzw. eine Custom Card (Channel-Baum wird aus `channels`
++ dem `cid` jedes Clients zusammengesetzt).
+
+### Empfohlen: große Attribute vom Recorder ausschließen
+
+`channels` und `clients` sind umfangreich. Damit die HA-Datenbank nicht
+unnötig wächst, in der `configuration.yaml` vom Verlauf ausnehmen:
+
+```yaml
+recorder:
+  exclude:
+    entity_globs:
+      - sensor.teamspeak_*_kanale
+      - sensor.teamspeak_*_verbundene_clients
+```
+
+Die aktuellen Zustände/Attribute bleiben live verfügbar — nur die Historie
+wird nicht mehr dauerhaft gespeichert.
+
+## Verwaltung (Services)
+
+Die Integration registriert Services, mit denen der Server gesteuert werden kann
+(erfordert einen API-Key mit `scope=write` oder `scope=manage`, s. u.):
+
+| Service | Wirkung |
+|---|---|
+| `teamspeak.poke_client` | Client anstupsen (Pop-up) |
+| `teamspeak.move_client` | Client in einen Kanal verschieben |
+| `teamspeak.kick_client` | Client aus Kanal (`scope: channel`) oder vom Server (`scope: server`) kicken |
+| `teamspeak.ban_client` | Client bannen (`duration` in Sekunden, `0` = dauerhaft) |
+| `teamspeak.send_message` | Private Nachricht an einen Client |
+| `teamspeak.broadcast_message` | Rundnachricht an alle auf dem virtuellen Server |
+
+Alle Services erwarten die **`client_id`** (`clid`) bzw. **`channel_id`** (`cid`)
+aus den Sensor-Attributen. Bei nur einem konfigurierten Server ist das Feld
+`config_entry_id` optional. Beispiel:
+
+```yaml
+action: teamspeak.move_client
+data:
+  client_id: 25
+  channel_id: 105
+```
 
 ## Installation
 

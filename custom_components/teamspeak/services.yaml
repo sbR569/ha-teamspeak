@@ -1,0 +1,133 @@
+poke_client:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    client_id:
+      required: true
+      example: 12
+      selector:
+        number:
+          min: 1
+          mode: box
+    message:
+      required: true
+      example: "Bitte in Lobby 1 kommen"
+      selector:
+        text:
+
+move_client:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    client_id:
+      required: true
+      example: 12
+      selector:
+        number:
+          min: 1
+          mode: box
+    channel_id:
+      required: true
+      example: 105
+      selector:
+        number:
+          min: 1
+          mode: box
+
+kick_client:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    client_id:
+      required: true
+      example: 12
+      selector:
+        number:
+          min: 1
+          mode: box
+    scope:
+      required: false
+      default: server
+      selector:
+        select:
+          options:
+            - value: channel
+              label: "From channel"
+            - value: server
+              label: "From server"
+    reason:
+      required: false
+      example: "Bitte Regeln beachten"
+      selector:
+        text:
+
+ban_client:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    client_id:
+      required: true
+      example: 12
+      selector:
+        number:
+          min: 1
+          mode: box
+    duration:
+      required: false
+      default: 0
+      example: 3600
+      selector:
+        number:
+          min: 0
+          mode: box
+          unit_of_measurement: s
+    reason:
+      required: false
+      example: "Spam"
+      selector:
+        text:
+
+send_message:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    client_id:
+      required: true
+      example: 12
+      selector:
+        number:
+          min: 1
+          mode: box
+    message:
+      required: true
+      example: "Hallo!"
+      selector:
+        text:
+
+broadcast_message:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    message:
+      required: true
+      example: "Server wird in 5 Minuten neu gestartet"
+      selector:
+        text:
