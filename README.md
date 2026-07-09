@@ -1,3 +1,5 @@
+<img src="assets/logo.png" align="right" width="110" alt="ha-teamspeak Logo"/>
+
 # TeamSpeak Server – Home Assistant Integration
 
 Custom Integration für selbst gehostete TeamSpeak-Server. Fragt den Server über

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- ha-teamspeak logo: headset with boom mic and voice dots -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f8dd8"/>
+      <stop offset="1" stop-color="#17549c"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="512" height="512" rx="115" fill="url(#bg)"/>
+
+  <!-- headband -->
+  <path d="M 106 268 A 150 150 0 0 1 406 268"
+        fill="none" stroke="#fff" stroke-width="42" stroke-linecap="round"/>
+
+  <!-- ear cups -->
+  <rect x="75" y="258" width="62" height="118" rx="26" fill="#fff"/>
+  <rect x="375" y="258" width="62" height="118" rx="26" fill="#fff"/>
+
+  <!-- boom mic (arc on circle around 256,265 r=150, from 147deg to 95deg) -->
+  <path d="M 130.2 346.7 A 150 150 0 0 0 242.9 414.4"
+        fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round"/>
+  <circle cx="242.9" cy="414.4" r="27" fill="#fff"/>
+
+  <!-- voice dots -->
+  <circle cx="300.9" cy="408.4" r="9" fill="#fff"/>
+  <circle cx="338.9" cy="400.4" r="11" fill="#fff" opacity="0.78"/>
+  <circle cx="376.9" cy="390.4" r="13" fill="#fff" opacity="0.57"/>
+</svg>
