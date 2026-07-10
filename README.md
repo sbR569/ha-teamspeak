@@ -1,90 +1,96 @@
-<img src="assets/logo.png" align="right" width="110" alt="ha-teamspeak Logo"/>
+<img src="assets/logo.png" align="right" width="110" alt="ha-teamspeak logo"/>
 
 # TeamSpeak Server – Home Assistant Integration
 
-Custom Integration für selbst gehostete TeamSpeak-Server. Fragt den Server über
-die **WebQuery HTTP-API** (API-Key, empfohlen) oder die klassische
-**ServerQuery-Schnittstelle** (raw/telnet) ab und stellt Status, Channel-Baum
-und detaillierte Client-Infos bereit — plus **Verwaltungsaktionen**
-(verschieben, kicken, bannen, anstupsen, Nachrichten). Damit lässt sich ein
-Dashboard im Stil von ts3.app / ts3manager bauen. Funktioniert mit TeamSpeak 3
-Servern und dem neuen TeamSpeak-6-Server, ohne zusätzliche Python-Abhängigkeiten.
+Custom integration for self-hosted TeamSpeak servers. It polls the server via
+the **WebQuery HTTP API** (API key, recommended) or the classic
+**ServerQuery interface** (raw/telnet) and exposes server status, the channel
+tree and detailed client info — plus **management actions** (move, kick, ban,
+poke, messages). This makes it easy to build a dashboard in the style of
+ts3.app / ts3manager. Works with TeamSpeak 3 servers and the new TeamSpeak 6
+server, with no extra Python dependencies.
 
-## Sensoren
+## Sensors
 
-Alle Sensoren hängen an einem Gerät „TeamSpeak &lt;host&gt;“:
+All sensors belong to a device called “TeamSpeak &lt;host&gt;”:
 
-| Entität | Inhalt |
+| Entity | Content |
 |---|---|
-| `sensor.teamspeak_<host>_status` | Server-Status (`online` / `offline`) — zeigt auch `offline`, wenn der Server nicht erreichbar ist |
-| `sensor.teamspeak_<host>_online_seit` | Zeitstempel, seit wann der Server läuft |
-| `sensor.teamspeak_<host>_version` | Server-Version (Diagnose-Entität) |
-| `sensor.teamspeak_<host>_maximale_clients` | Maximal erlaubte Clients |
-| `sensor.teamspeak_<host>_verbundene_clients` | Anzahl verbundener Clients. Attribut `client_names` (Namensliste) und **`clients`** (Detail-Liste je Client: `clid`, `cid`, Nickname, Land, Plattform, Version, Idle, Mute-/Talk-Flags, Servergruppen, IP …) |
-| `sensor.teamspeak_<host>_client_namen` | Die Namen der verbundenen Clients als Text (kommagetrennt); `—` wenn niemand online ist |
-| `sensor.teamspeak_<host>_kanale` | Anzahl echter Kanäle (ohne Spacer). Attribut **`channels`** = kompletter Channel-Baum (`cid`, `parent_id`, `order`, Name, Client-Zahl, Talk-Power, Flags, Spacer-Erkennung …) |
-| `sensor.teamspeak_<host>_ping` | Durchschnittlicher Ping aller Clients in ms |
-| `sensor.teamspeak_<host>_paketverlust` | Durchschnittlicher Paketverlust in % |
-| `sensor.teamspeak_<host>_bandbreite_gesendet` | Aktuell gesendete Bandbreite (letzte Sekunde); HA rechnet automatisch in kB/s um |
-| `sensor.teamspeak_<host>_bandbreite_empfangen` | Aktuell empfangene Bandbreite (letzte Sekunde) |
-| `sensor.teamspeak_<host>_aktive_banns` | Anzahl aktiver Banns; Details (wer, Grund, läuft ab am …) im Attribut **`bans`** |
-| `binary_sensor.teamspeak_<host>_online` | `on`/`off` — ideal für Automatisierungen und Verfügbarkeits-Tracking |
+| `sensor.teamspeak_<host>_status` | Server status (`online` / `offline`) — also shows `offline` when the server is unreachable |
+| `sensor.teamspeak_<host>_online_since` | Timestamp since when the server has been running |
+| `sensor.teamspeak_<host>_version` | Server version (diagnostic entity) |
+| `sensor.teamspeak_<host>_maximum_clients` | Maximum allowed clients |
+| `sensor.teamspeak_<host>_clients_connected` | Number of connected clients. Attributes `client_names` (list of names) and **`clients`** (detail list per client: `clid`, `cid`, nickname, country, platform, version, idle time, mute/talk flags, server groups, IP …) |
+| `sensor.teamspeak_<host>_client_names` | Names of the connected clients as text (comma-separated); `—` when nobody is online |
+| `sensor.teamspeak_<host>_channels` | Number of real channels (spacers excluded). Attribute **`channels`** = the complete channel tree (`cid`, `parent_id`, `order`, name, client count, talk power, flags, spacer detection …) |
+| `sensor.teamspeak_<host>_ping` | Average ping of all clients in ms |
+| `sensor.teamspeak_<host>_packet_loss` | Average packet loss in % |
+| `sensor.teamspeak_<host>_bandwidth_sent` | Bandwidth currently sent (last second); HA converts to kB/s automatically |
+| `sensor.teamspeak_<host>_bandwidth_received` | Bandwidth currently received (last second) |
+| `sensor.teamspeak_<host>_active_bans` | Number of active bans; details (who, reason, expires at …) in the **`bans`** attribute |
+| `binary_sensor.teamspeak_<host>_online` | `on`/`off` — ideal for automations and availability tracking |
 
-Die Clients im **`clients`**-Attribut enthalten zusätzlich `group_names` (aufgelöste
-Servergruppen-Namen, z. B. „Server Admin“); das komplette Gruppen-Mapping liegt im
-Attribut `server_groups`.
+> Entity IDs are derived from the entity names in your Home Assistant
+> language at setup time. The IDs above are what an English instance
+> generates; on a German instance you get e.g. `_kanale` instead of
+> `_channels`. Check the actual IDs under **Developer Tools → States**
+> (filter “teamspeak”).
 
-Abfrage-Intervall: standardmäßig 30 Sekunden — einstellbar unter
-**Einstellungen → Geräte & Dienste → TeamSpeak → Konfigurieren** (10–300 s).
+The clients in the **`clients`** attribute additionally contain `group_names`
+(resolved server group names, e.g. “Server Admin”); the complete group mapping
+is available in the `server_groups` attribute.
 
-> Ping, Paketverlust und Bandbreite stammen aus `serverinfo` und bleiben daher
-> mit einem TS6-`read`-Key `unbekannt` (siehe TS6-Hinweis bei der Einrichtung).
+Poll interval: 30 seconds by default — adjustable under
+**Settings → Devices & Services → TeamSpeak → Configure** (10–300 s).
 
-Die Attribute `channels` und `clients` liefern die vollständigen, strukturierten
-Daten für ein Dashboard bzw. eine Custom Card (Channel-Baum wird aus `channels`
-+ dem `cid` jedes Clients zusammengesetzt).
+> Ping, packet loss and bandwidth come from `serverinfo` and therefore stay
+> `unknown` with a TS6 `read` key (see the TS6 note in the setup section).
 
-### Empfohlen: große Attribute vom Recorder ausschließen
+The `channels` and `clients` attributes provide the complete, structured data
+for a dashboard or a custom card (the channel tree is assembled from
+`channels` plus each client's `cid`).
 
-`channels` und `clients` sind umfangreich. Damit die HA-Datenbank nicht
-unnötig wächst, in der `configuration.yaml` vom Verlauf ausnehmen:
+### Recommended: exclude the large attributes from the recorder
+
+`channels` and `clients` are large. To keep the HA database from growing
+unnecessarily, exclude them from history in `configuration.yaml`:
 
 ```yaml
 recorder:
   exclude:
     entity_globs:
-      - sensor.teamspeak_*_kanale
-      - sensor.teamspeak_*_verbundene_clients
+      - sensor.teamspeak_*_channels
+      - sensor.teamspeak_*_clients_connected
 ```
 
-Die aktuellen Zustände/Attribute bleiben live verfügbar — nur die Historie
-wird nicht mehr dauerhaft gespeichert.
+The current states/attributes stay available live — only the history is no
+longer stored permanently.
 
-## Verwaltung (Services)
+## Management (services)
 
-Die Integration registriert Services, mit denen der Server gesteuert werden kann
-(erfordert einen API-Key mit `scope=write` oder `scope=manage`, s. u.):
+The integration registers services to control the server (requires an API key
+with `scope=write` or `scope=manage`, see below):
 
-| Service | Wirkung |
+| Service | Effect |
 |---|---|
-| `teamspeak.poke_client` | Client anstupsen (Pop-up) |
-| `teamspeak.move_client` | Client in einen Kanal verschieben |
-| `teamspeak.kick_client` | Client aus Kanal (`scope: channel`) oder vom Server (`scope: server`) kicken |
-| `teamspeak.ban_client` | Client bannen (`duration` in Sekunden, `0` = dauerhaft) |
-| `teamspeak.send_message` | Private Nachricht an einen Client |
-| `teamspeak.send_channel_message` | Nachricht in einen bestimmten Kanal (der Query-Client wird dafür kurz dorthin bewegt) |
-| `teamspeak.broadcast_message` | Rundnachricht an alle auf dem virtuellen Server |
-| `teamspeak.unban_client` | Aktiven Bann löschen (`ban_id` aus dem `bans`-Attribut) |
-| `teamspeak.create_channel` | Kanal erstellen (Name, optional Parent/Topic/Passwort/Limit/Typ); liefert die neue `channel_id` als Response |
-| `teamspeak.edit_channel` | Kanal ändern (Name, Topic, Passwort, Max-Clients, Talk-Power — nur angegebene Felder) |
-| `teamspeak.delete_channel` | Kanal löschen (`force: true` kickt enthaltene Clients) |
-| `teamspeak.get_logs` | Letzte Server-Log-Zeilen als Response-Daten (`lines`: 1–100, `instance` fürs Instanz-Log) |
-| `teamspeak.get_client_info` | Verbindungsdetails eines Clients als Response (verbunden seit, Ping, Bytes, IP …) |
-| `teamspeak.get_channel_info` | Alle Details eines Kanals als Response (inkl. Beschreibung) |
+| `teamspeak.poke_client` | Poke a client (pop-up) |
+| `teamspeak.move_client` | Move a client into a channel |
+| `teamspeak.kick_client` | Kick a client from the channel (`scope: channel`) or from the server (`scope: server`) |
+| `teamspeak.ban_client` | Ban a client (`duration` in seconds, `0` = permanent) |
+| `teamspeak.send_message` | Private message to a client |
+| `teamspeak.send_channel_message` | Message into a specific channel (the query client is moved there briefly) |
+| `teamspeak.broadcast_message` | Broadcast to everyone on the virtual server |
+| `teamspeak.unban_client` | Delete an active ban (`ban_id` from the `bans` attribute) |
+| `teamspeak.create_channel` | Create a channel (name, optional parent/topic/password/limit/type); returns the new `channel_id` as response data |
+| `teamspeak.edit_channel` | Edit a channel (name, topic, password, max clients, talk power — only the provided fields) |
+| `teamspeak.delete_channel` | Delete a channel (`force: true` kicks any clients inside) |
+| `teamspeak.get_logs` | Latest server log lines as response data (`lines`: 1–100, `instance` for the instance log) |
+| `teamspeak.get_client_info` | Connection details of a client as response data (connected since, ping, bytes, IP …) |
+| `teamspeak.get_channel_info` | Full details of a channel as response data (including its description) |
 
-Alle Services erwarten die **`client_id`** (`clid`) bzw. **`channel_id`** (`cid`)
-aus den Sensor-Attributen. Bei nur einem konfigurierten Server ist das Feld
-`config_entry_id` optional. Beispiel:
+All services expect the **`client_id`** (`clid`) or **`channel_id`** (`cid`)
+from the sensor attributes. With only one configured server the
+`config_entry_id` field is optional. Example:
 
 ```yaml
 action: teamspeak.move_client
@@ -95,17 +101,17 @@ data:
 
 ## Events
 
-Bei jeder Änderung feuert die Integration ein **`teamspeak_event`** auf dem
-HA-Event-Bus — perfekt für Automatisierungen ohne Template-Vergleiche:
+On every change the integration fires a **`teamspeak_event`** on the HA event
+bus — perfect for automations without template comparisons:
 
-| `type` | Zusätzliche Felder |
+| `type` | Additional fields |
 |---|---|
 | `client_connected` | `nickname`, `clid`, `channel`, `channel_id` |
 | `client_disconnected` | `nickname`, `clid` |
 | `client_moved` | `nickname`, `clid`, `from_channel`, `to_channel` (+ IDs) |
 | `status_changed` | `old_status`, `new_status` |
 
-Alle Events enthalten außerdem `entry_id` und `host`. Beispiel-Automatisierung:
+All events also contain `entry_id` and `host`. Example automation:
 
 ```yaml
 triggers:
@@ -116,15 +122,15 @@ triggers:
 actions:
   - action: notify.notify
     data:
-      message: "{{ trigger.event.data.nickname }} ist jetzt auf dem TeamSpeak ({{ trigger.event.data.channel }})"
+      message: "{{ trigger.event.data.nickname }} just joined TeamSpeak ({{ trigger.event.data.channel }})"
 ```
 
 ## Installation
 
-### Variante A: Manuell
+### Option A: Manual
 
-1. Den Ordner `custom_components/teamspeak` aus diesem Repository in den
-   Home-Assistant-Konfigurationsordner kopieren, sodass folgende Struktur entsteht:
+1. Copy the `custom_components/teamspeak` folder from this repository into your
+   Home Assistant configuration folder, resulting in this structure:
 
    ```
    config/
@@ -135,120 +141,122 @@ actions:
            └── ...
    ```
 
-2. Home Assistant neu starten.
+2. Restart Home Assistant.
 
-### Variante B: HACS (Custom Repository)
+### Option B: HACS (custom repository)
 
-1. Das Repository zu GitHub pushen.
-2. In HACS: **Integrationen → ⋮ → Benutzerdefinierte Repositories** → Repository-URL
-   eintragen, Kategorie **Integration**.
-3. „TeamSpeak Server“ installieren und Home Assistant neu starten.
+1. Push the repository to GitHub.
+2. In HACS: **Integrations → ⋮ → Custom repositories** → enter the repository
+   URL, category **Integration**.
+3. Install “TeamSpeak Server” and restart Home Assistant.
 
-## Einrichtung
+## Setup
 
-**Einstellungen → Geräte & Dienste → Integration hinzufügen → „TeamSpeak Server“**
+**Settings → Devices & Services → Add integration → “TeamSpeak Server”**
 
-Beim Hinzufügen kannst du zwischen zwei Verbindungsarten wählen:
+When adding, you can choose between two connection types:
 
-### Variante 1: WebQuery mit API-Key (empfohlen)
+### Option 1: WebQuery with API key (recommended)
 
-Die HTTP-API des TeamSpeak-Servers (ab Server-Version 3.12.0). Sie muss auf dem
-Server erst aktiviert werden:
+The HTTP API of the TeamSpeak server (server version 3.12.0 and later). It
+must be enabled on the server first:
 
-1. **WebQuery aktivieren** — in der `ts3server.ini`:
+1. **Enable WebQuery** — in `ts3server.ini`:
 
    ```ini
    query_protocols=raw,http
    ```
 
-   Bei Docker stattdessen die Umgebungsvariable `TS3SERVER_QUERY_PROTOCOLS=raw,http`
-   setzen und Port `10080/tcp` freigeben (`-p 10080:10080`). Danach den Server
-   neu starten.
+   With Docker, set the environment variable `TS3SERVER_QUERY_PROTOCOLS=raw,http`
+   instead and expose port `10080/tcp` (`-p 10080:10080`). Then restart the
+   server.
 
-2. **API-Key erstellen** — einmalig per raw ServerQuery (z. B. `telnet <host> 10011`):
+2. **Create an API key** — once, via raw ServerQuery (e.g. `telnet <host> 10011`):
 
    ```
-   login serveradmin DEIN_PASSWORT
+   login serveradmin YOUR_PASSWORD
    use sid=1
    apikeyadd scope=read lifetime=0
    ```
 
-   Die Antwort enthält den Key (`apikey=BAA...`) — er wird **nur einmal** angezeigt.
-   `scope=read` reicht für diese Integration, `lifetime=0` bedeutet unbegrenzt gültig.
+   The response contains the key (`apikey=BAA...`) — it is shown **only once**.
+   `scope=read` is enough for this integration, `lifetime=0` means it never
+   expires.
 
-| Feld | Beschreibung |
+| Field | Description |
 |---|---|
-| Host | Hostname oder IP des TeamSpeak-Servers |
-| WebQuery-Port | Standard `10080` (HTTP) bzw. `10443` mit HTTPS |
-| API-Key | Der mit `apikeyadd` erzeugte Key |
-| Virtuelle Server-ID | Standard `1` — **prüfen!** Die tatsächliche ID zeigt `serverlist` (Spalte `virtualserver_id`); beim TeamSpeak-6-Server ist sie oft nicht 1 |
-| HTTPS verwenden | Nur aktivieren, wenn WebQuery mit TLS läuft (`https`-Protokoll, Port `10443`) |
+| Host | Hostname or IP of the TeamSpeak server |
+| WebQuery port | Default `10080` (HTTP) or `10443` with HTTPS |
+| API key | The key created with `apikeyadd` |
+| Virtual server ID | Default `1` — **verify it!** The actual ID is shown by `serverlist` (column `virtualserver_id`); on the TeamSpeak 6 server it is often not 1 |
+| Use HTTPS | Only enable if WebQuery runs with TLS (`https` protocol, port `10443`) |
 
-#### Hinweis für den neuen TeamSpeak-Server (TS6)
+#### Note for the new TeamSpeak server (TS6)
 
-- API-Keys des TS6-Servers beginnen mit `AQ…` (TS3: `BAA…`) — beides ist gültig.
-- TS6 verweigert `serverinfo` für Keys mit `scope=read`. Die Integration fängt das
-  ab: Status, Version und verbundene Clients funktionieren trotzdem, aber
-  **„Online seit“ und „Maximale Clients“ bleiben unbekannt** (eine entsprechende
-  Warnung erscheint einmalig im Log). Für alle Sensoren einen Key mit höherem
-  Scope erzeugen: `apikeyadd scope=write lifetime=0` (oder `scope=manage`).
+- API keys of the TS6 server start with `AQ…` (TS3: `BAA…`) — both are valid.
+- TS6 denies `serverinfo` for keys with `scope=read`. The integration handles
+  this gracefully: status, version and connected clients still work, but
+  **“Online since” and “Maximum clients” stay unknown** (a corresponding
+  warning is logged once). To get all sensors, create a key with a higher
+  scope: `apikeyadd scope=write lifetime=0` (or `scope=manage`).
 
-### Variante 2: Klassisches ServerQuery (Benutzername/Passwort)
+### Option 2: Classic ServerQuery (username/password)
 
-| Feld | Beschreibung |
+| Field | Description |
 |---|---|
-| Host | Hostname oder IP des TeamSpeak-Servers |
-| ServerQuery-Port | Standard `10011` (raw/telnet — **nicht** der SSH-Query-Port `10022` und nicht der Voice-Port `9987`) |
-| ServerQuery-Benutzername | Standard `serveradmin` |
-| ServerQuery-Passwort | Wird beim ersten Serverstart im Log ausgegeben; zurücksetzbar mit `ts3server_minimal_runscript.sh serveradmin_password=NEUES_PASSWORT` bzw. beim neuen TS-Server über `tsserver --serveradmin-password` |
-| Virtuelle Server-ID | Standard `1` (nur relevant, wenn mehrere virtuelle Server laufen) |
+| Host | Hostname or IP of the TeamSpeak server |
+| ServerQuery port | Default `10011` (raw/telnet — **not** the SSH query port `10022` and not the voice port `9987`) |
+| ServerQuery username | Default `serveradmin` |
+| ServerQuery password | Printed to the log on first server start; can be reset with `ts3server_minimal_runscript.sh serveradmin_password=NEW_PASSWORD`, or on the new TS server via `tsserver --serveradmin-password` |
+| Virtual server ID | Default `1` (only relevant if multiple virtual servers are running) |
 
-### Wichtig: Anti-Flood-Whitelist
+### Important: anti-flood allowlist
 
-TeamSpeak drosselt bzw. bannt IPs, die viele Query-Befehle senden. Die Integration
-bleibt mit 5 Befehlen pro 30 Sekunden zwar unter dem Standard-Limit, es ist aber
-trotzdem empfehlenswert, die IP deines Home-Assistant-Hosts in die Datei
-`query_ip_allowlist.txt` (ältere Versionen: `query_ip_whitelist.txt`) im
-TeamSpeak-Serververzeichnis einzutragen — eine IP pro Zeile, danach den
-TeamSpeak-Server neu starten.
+TeamSpeak throttles or bans IPs that send many query commands. The integration
+stays below the default limit with 5 commands per 30 seconds, but it is still
+recommended to add the IP of your Home Assistant host to the file
+`query_ip_allowlist.txt` (older versions: `query_ip_whitelist.txt`) in the
+TeamSpeak server directory — one IP per line, then restart the TeamSpeak
+server.
 
-Läuft der TeamSpeak-Server in Docker, muss Port `10011/tcp` freigegeben sein
+If the TeamSpeak server runs in Docker, port `10011/tcp` must be exposed
 (`-p 10011:10011`).
 
-## Verbindung vorab testen
+## Testing the connection first
 
-Ohne Home Assistant, direkt von einem Rechner mit Python 3.11+:
+Without Home Assistant, directly from any machine with Python 3.11+:
 
 ```
-# Klassisches ServerQuery (Passwort wird abgefragt):
+# Classic ServerQuery (prompts for the password):
 python test_connection.py <host> [--port 10011] [--user serveradmin] [--sid 1]
 
-# WebQuery mit API-Key:
-python test_connection.py <host> --api-key DEIN_API_KEY [--port 10080] [--sid 1]
+# WebQuery with API key:
+python test_connection.py <host> --api-key YOUR_API_KEY [--port 10080] [--sid 1]
 ```
 
-Schnelltest der WebQuery-API auch per curl:
+Quick test of the WebQuery API via curl:
 
 ```
-curl -H "x-api-key: DEIN_API_KEY" http://<host>:10080/1/serverinfo
+curl -H "x-api-key: YOUR_API_KEY" http://<host>:10080/1/serverinfo
 ```
 
-Gibt Status, Online-seit, Version, maximale Clients und alle verbundenen
-Client-Namen aus — praktisch, um Zugangsdaten und Erreichbarkeit zu prüfen.
+Prints status, online-since, version, maximum clients and the names of all
+connected clients — handy for verifying credentials and reachability.
 
 ## Logging
 
-Die Integration loggt aussagekräftig ins Home-Assistant-Log:
+The integration logs meaningfully to the Home Assistant log:
 
-- **INFO**: Statuswechsel des Servers (`online` → `offline`), Clients, die sich
-  verbinden oder trennen (mit Namen), erkannte Server-Neustarts sowie
-  wiederhergestellte Verbindungen.
-- **WARNING**: Server nicht erreichbar (einmalig, kein Log-Spam bei anhaltendem Ausfall).
-- **ERROR**: Fehlgeschlagene Query-Anfragen (z. B. ungültiger API-Key).
-- **DEBUG**: Jeder Poll mit Dauer, Status, Client-Zahl und Version sowie alle
-  einzelnen Query-Kommandos (Passwörter werden nie geloggt).
+- **INFO**: server status changes (`online` → `offline`), clients connecting
+  or disconnecting (with names), detected server restarts, and recovered
+  connections.
+- **WARNING**: server unreachable (logged once, no log spam during an ongoing
+  outage).
+- **ERROR**: failed query requests (e.g. invalid API key).
+- **DEBUG**: every poll with duration, status, client count and version, plus
+  every individual query command (passwords are never logged).
 
-Debug-Logging aktivieren in der `configuration.yaml`:
+Enable debug logging in `configuration.yaml`:
 
 ```yaml
 logger:
@@ -256,80 +264,82 @@ logger:
     custom_components.teamspeak: debug
 ```
 
-Oder zur Laufzeit über **Einstellungen → Geräte & Dienste → TeamSpeak Server →
-„Debug-Protokollierung aktivieren“**.
+Or at runtime via **Settings → Devices & Services → TeamSpeak Server →
+“Enable debug logging”**.
 
 ## Dashboard
 
-Im Ordner [`dashboards/`](dashboards/) liegen zwei fertige Ansichten. Die
-Entity-IDs darin nutzen den Platzhalter `meinserver` — bei
-anderem Host anpassen (die tatsächlichen IDs zeigen die **Entwicklerwerkzeuge →
-Zustände**, Filter „teamspeak").
+The [`dashboards/`](dashboards/) folder contains two ready-made views. The
+entity IDs in them use the placeholder `meinserver` and were generated on a
+German-language instance — replace them with your actual IDs (see
+**Developer Tools → States**, filter “teamspeak”).
 
-### Variante A: TeamSpeak Viewer Card (ts3.app-Look)
+### Option A: TeamSpeak Viewer Card (ts3.app look)
 
-Eine eigene Lovelace-Karte ([`www/teamspeak-viewer-card.js`](www/teamspeak-viewer-card.js)),
-die den Channel-Baum wie im TeamSpeak-Client rendert:
+A custom Lovelace card ([`www/teamspeak-viewer-card.js`](www/teamspeak-viewer-card.js))
+that renders the channel tree like the TeamSpeak client:
 
-- Kanäle hierarchisch eingerückt, Spacer als Trenner, Passwort-Schloss, Client-Zahl
-- Clients mit Status-Icon (spricht 🟢 / Mikro aus / Ton aus / abwesend), Länder-Flagge,
-  Idle-Zeit, Aufnahme-/Channel-Commander-Badges
-- **Klick auf einen Client** öffnet die Aktionsleiste: Anstupsen, Nachricht,
-  Verschieben (dann Zielkanal anklicken), Kick (Kanal/Server), Bannen —
-  destruktive Aktionen mit Bestätigungsdialog
-- **Klick auf einen Kanal** öffnet die Kanal-Aktionen: Nachricht in den Kanal,
-  Unterkanal erstellen, Umbenennen, Löschen (fragt nach; kickt bei Bedarf
-  enthaltene Clients per `force`)
-- Megafon-Button im Header für Rundnachrichten
-- Folgt automatisch dem HA-Theme (hell/dunkel)
+- Channels hierarchically indented, spacers as separators, password lock,
+  client count
+- Clients with status icon (talking 🟢 / mic muted / sound muted / away),
+  country flag, idle time, recording/channel-commander badges
+- **Clicking a client** opens the action bar: poke, message, move (then click
+  the target channel), kick (channel/server), ban — destructive actions with a
+  confirmation dialog
+- **Clicking a channel** opens the channel actions: message the channel,
+  create sub-channel, rename, delete (asks first; kicks any clients inside via
+  `force` if needed)
+- Megaphone button in the header for broadcasts
+- Automatically follows the HA theme (light/dark)
 
 Installation:
 
-1. `www/teamspeak-viewer-card.js` nach `config/www/` kopieren.
-2. **Einstellungen → Dashboards → ⋮ → Ressourcen → Ressource hinzufügen**:
-   URL `/local/teamspeak-viewer-card.js`, Typ **JavaScript-Modul**.
-3. Karte hinzufügen (die Karte erscheint auch im Karten-Picker als
-   „TeamSpeak Viewer Card"):
+1. Copy `www/teamspeak-viewer-card.js` to `config/www/`.
+2. **Settings → Dashboards → ⋮ → Resources → Add resource**:
+   URL `/local/teamspeak-viewer-card.js`, type **JavaScript module**.
+3. Add the card (it also appears in the card picker as
+   “TeamSpeak Viewer Card”):
 
 ```yaml
 type: custom:teamspeak-viewer-card
-title: Mein TeamSpeak
-channels_entity: sensor.teamspeak_meinserver_kanale
-clients_entity: sensor.teamspeak_meinserver_verbundene_clients
-status_entity: sensor.teamspeak_meinserver_status
-max_clients_entity: sensor.teamspeak_meinserver_maximale_clients
-show_spacers: true    # Spacer anzeigen
-show_actions: true    # Klick-Aktionen (false = reine Anzeige)
+title: My TeamSpeak
+channels_entity: sensor.teamspeak_myserver_channels
+clients_entity: sensor.teamspeak_myserver_clients_connected
+status_entity: sensor.teamspeak_myserver_status
+max_clients_entity: sensor.teamspeak_myserver_maximum_clients
+show_spacers: true    # show spacers
+show_actions: true    # click actions (false = display only)
 max_height: 560       # optional, px
 ```
 
-Die komplette Ansicht (inkl. Kopfzeile und Verlaufsgraph):
+The complete view (including header and history graph):
 [`dashboards/teamspeak-custom-card.yaml`](dashboards/teamspeak-custom-card.yaml) —
-Inhalt über **Dashboard → ⋮ → Raw-Konfigurationseditor** als neue View einfügen.
+paste its content as a new view via **Dashboard → ⋮ → Raw configuration
+editor**.
 
-> Die Aktionen rufen die `teamspeak.*`-Services auf und brauchen daher einen
-> API-Key mit `scope=write`/`manage`. Mit `show_actions: false` ist die Karte
-> ein reiner Viewer und funktioniert auch mit einem read-Key.
+> The actions call the `teamspeak.*` services and therefore need an API key
+> with `scope=write`/`manage`. With `show_actions: false` the card is a pure
+> viewer and also works with a read key.
 
-### Variante B: Nur HA-Bordmittel
+### Option B: Built-in HA cards only
 
 [`dashboards/teamspeak-builtin.yaml`](dashboards/teamspeak-builtin.yaml) —
-komplette View ohne Custom Card: Glance-Kopfzeile, Channel-Baum als
-Markdown-Template (Spacer werden ausgeblendet), „Wer ist online?"-Tabelle
-(Status, Land, Plattform, Idle) und ein 24-h-Verlaufsgraph. Einfach in den
-Raw-Konfigurationseditor einfügen — fertig.
+a complete view without a custom card: glance header, channel tree as a
+Markdown template (spacers are hidden), “Who is online?” table (status,
+country, platform, idle) and a 24-hour history graph. Just paste it into the
+raw configuration editor — done.
 
-## Beispiel: Automatisierung bei Client-Verbindung
+## Example: automation on client connect
 
 ```yaml
 triggers:
   - trigger: numeric_state
-    entity_id: sensor.teamspeak_<host>_verbundene_clients
+    entity_id: sensor.teamspeak_<host>_clients_connected
     above: 0
 actions:
   - action: notify.notify
     data:
       message: >-
-        Jemand ist auf dem TeamSpeak:
-        {{ state_attr('sensor.teamspeak_<host>_verbundene_clients', 'client_names') | join(', ') }}
+        Someone is on TeamSpeak:
+        {{ state_attr('sensor.teamspeak_<host>_clients_connected', 'client_names') | join(', ') }}
 ```
