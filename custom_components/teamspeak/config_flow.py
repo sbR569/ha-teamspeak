@@ -9,15 +9,22 @@ from typing import Any
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
+    CONF_SCAN_INTERVAL,
     CONF_SSL,
     CONF_USERNAME,
 )
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     TextSelector,
@@ -28,10 +35,13 @@ from homeassistant.helpers.selector import (
 from .const import (
     CONF_SID,
     DEFAULT_PORT,
+    DEFAULT_SCAN_INTERVAL,
     DEFAULT_SID,
     DEFAULT_USERNAME,
     DEFAULT_WEBQUERY_PORT,
     DOMAIN,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
 )
 from .ts3query import ERROR_ID_INVALID_LOGIN, TS3QueryError, fetch_server_data
 from .webquery import WebQueryError, fetch_server_data_webquery
@@ -69,10 +79,43 @@ STEP_SERVERQUERY_DATA_SCHEMA = vol.Schema(
 )
 
 
+class TeamSpeakOptionsFlow(OptionsFlow):
+    """Options: adjust the poll interval."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Show and handle the options form."""
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_SCAN_INTERVAL,
+                        default=self.config_entry.options.get(
+                            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+                        ),
+                    ): vol.All(
+                        vol.Coerce(int),
+                        vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
+                    ),
+                }
+            ),
+        )
+
+
 class TeamSpeakConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle the config flow for a TeamSpeak server."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> TeamSpeakOptionsFlow:
+        """Return the options flow handler."""
+        return TeamSpeakOptionsFlow()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None

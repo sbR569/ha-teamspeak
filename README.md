@@ -27,8 +27,15 @@ Alle Sensoren hängen an einem Gerät „TeamSpeak &lt;host&gt;“:
 | `sensor.teamspeak_<host>_paketverlust` | Durchschnittlicher Paketverlust in % |
 | `sensor.teamspeak_<host>_bandbreite_gesendet` | Aktuell gesendete Bandbreite (letzte Sekunde); HA rechnet automatisch in kB/s um |
 | `sensor.teamspeak_<host>_bandbreite_empfangen` | Aktuell empfangene Bandbreite (letzte Sekunde) |
+| `sensor.teamspeak_<host>_aktive_banns` | Anzahl aktiver Banns; Details (wer, Grund, läuft ab am …) im Attribut **`bans`** |
+| `binary_sensor.teamspeak_<host>_online` | `on`/`off` — ideal für Automatisierungen und Verfügbarkeits-Tracking |
 
-Abfrage-Intervall: alle 30 Sekunden.
+Die Clients im **`clients`**-Attribut enthalten zusätzlich `group_names` (aufgelöste
+Servergruppen-Namen, z. B. „Server Admin“); das komplette Gruppen-Mapping liegt im
+Attribut `server_groups`.
+
+Abfrage-Intervall: standardmäßig 30 Sekunden — einstellbar unter
+**Einstellungen → Geräte & Dienste → TeamSpeak → Konfigurieren** (10–300 s).
 
 > Ping, Paketverlust und Bandbreite stammen aus `serverinfo` und bleiben daher
 > mit einem TS6-`read`-Key `unbekannt` (siehe TS6-Hinweis bei der Einrichtung).
@@ -65,7 +72,15 @@ Die Integration registriert Services, mit denen der Server gesteuert werden kann
 | `teamspeak.kick_client` | Client aus Kanal (`scope: channel`) oder vom Server (`scope: server`) kicken |
 | `teamspeak.ban_client` | Client bannen (`duration` in Sekunden, `0` = dauerhaft) |
 | `teamspeak.send_message` | Private Nachricht an einen Client |
+| `teamspeak.send_channel_message` | Nachricht in einen bestimmten Kanal (der Query-Client wird dafür kurz dorthin bewegt) |
 | `teamspeak.broadcast_message` | Rundnachricht an alle auf dem virtuellen Server |
+| `teamspeak.unban_client` | Aktiven Bann löschen (`ban_id` aus dem `bans`-Attribut) |
+| `teamspeak.create_channel` | Kanal erstellen (Name, optional Parent/Topic/Passwort/Limit/Typ); liefert die neue `channel_id` als Response |
+| `teamspeak.edit_channel` | Kanal ändern (Name, Topic, Passwort, Max-Clients, Talk-Power — nur angegebene Felder) |
+| `teamspeak.delete_channel` | Kanal löschen (`force: true` kickt enthaltene Clients) |
+| `teamspeak.get_logs` | Letzte Server-Log-Zeilen als Response-Daten (`lines`: 1–100, `instance` fürs Instanz-Log) |
+| `teamspeak.get_client_info` | Verbindungsdetails eines Clients als Response (verbunden seit, Ping, Bytes, IP …) |
+| `teamspeak.get_channel_info` | Alle Details eines Kanals als Response (inkl. Beschreibung) |
 
 Alle Services erwarten die **`client_id`** (`clid`) bzw. **`channel_id`** (`cid`)
 aus den Sensor-Attributen. Bei nur einem konfigurierten Server ist das Feld
@@ -76,6 +91,32 @@ action: teamspeak.move_client
 data:
   client_id: 25
   channel_id: 105
+```
+
+## Events
+
+Bei jeder Änderung feuert die Integration ein **`teamspeak_event`** auf dem
+HA-Event-Bus — perfekt für Automatisierungen ohne Template-Vergleiche:
+
+| `type` | Zusätzliche Felder |
+|---|---|
+| `client_connected` | `nickname`, `clid`, `channel`, `channel_id` |
+| `client_disconnected` | `nickname`, `clid` |
+| `client_moved` | `nickname`, `clid`, `from_channel`, `to_channel` (+ IDs) |
+| `status_changed` | `old_status`, `new_status` |
+
+Alle Events enthalten außerdem `entry_id` und `host`. Beispiel-Automatisierung:
+
+```yaml
+triggers:
+  - trigger: event
+    event_type: teamspeak_event
+    event_data:
+      type: client_connected
+actions:
+  - action: notify.notify
+    data:
+      message: "{{ trigger.event.data.nickname }} ist jetzt auf dem TeamSpeak ({{ trigger.event.data.channel }})"
 ```
 
 ## Installation
@@ -236,6 +277,9 @@ die den Channel-Baum wie im TeamSpeak-Client rendert:
 - **Klick auf einen Client** öffnet die Aktionsleiste: Anstupsen, Nachricht,
   Verschieben (dann Zielkanal anklicken), Kick (Kanal/Server), Bannen —
   destruktive Aktionen mit Bestätigungsdialog
+- **Klick auf einen Kanal** öffnet die Kanal-Aktionen: Nachricht in den Kanal,
+  Unterkanal erstellen, Umbenennen, Löschen (fragt nach; kickt bei Bedarf
+  enthaltene Clients per `force`)
 - Megafon-Button im Header für Rundnachrichten
 - Folgt automatisch dem HA-Theme (hell/dunkel)
 

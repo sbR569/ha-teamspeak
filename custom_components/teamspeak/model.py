@@ -124,6 +124,111 @@ def normalize_clients(
     return voice, query_count
 
 
+def normalize_ban(raw: dict[str, str]) -> dict[str, Any]:
+    """Turn a raw banlist item into a clean ban dict."""
+    created = _to_int(raw.get("created"))
+    duration = _to_int(raw.get("duration"))
+    return {
+        "ban_id": _to_int(raw.get("banid")),
+        "ip": raw.get("ip", ""),
+        "name": raw.get("name", ""),
+        "uid": raw.get("uid", ""),
+        "last_nickname": raw.get("lastnickname", ""),
+        "reason": raw.get("reason", ""),
+        "invoker": raw.get("invokername", ""),
+        "created": created or None,
+        "duration": duration,
+        # Unix timestamp when the ban ends; None = permanent.
+        "expires": (created + duration) if created and duration else None,
+        "enforcements": _to_int(raw.get("enforcements")),
+    }
+
+
+def normalize_bans(raw_bans: list[dict[str, str]]) -> list[dict[str, Any]]:
+    """Normalize the ban list, newest first."""
+    bans = [normalize_ban(item) for item in raw_bans]
+    bans.sort(key=lambda b: b["created"] or 0, reverse=True)
+    return bans
+
+
+def normalize_server_groups(raw_groups: list[dict[str, str]]) -> dict[int, str]:
+    """Map sgid -> group name; only regular groups (type=1), no templates."""
+    return {
+        _to_int(item.get("sgid")): item.get("name", "")
+        for item in raw_groups
+        if _to_int(item.get("type"), 1) == 1
+    }
+
+
+def resolve_group_names(
+    clients: list[dict[str, Any]], groups: dict[int, str]
+) -> None:
+    """Attach a ``group_names`` list to each client from its server_groups."""
+    for client in clients:
+        client["group_names"] = [
+            groups[gid] for gid in client.get("server_groups", []) if gid in groups
+        ]
+
+
+def diff_snapshots(
+    prev_clients: list[dict[str, Any]],
+    clients: list[dict[str, Any]],
+    channels: list[dict[str, Any]],
+    prev_status: str,
+    status: str,
+) -> list[dict[str, Any]]:
+    """Compare two poll snapshots and describe what happened.
+
+    Returns event dicts with a ``type`` of ``status_changed``,
+    ``client_connected``, ``client_disconnected`` or ``client_moved`` plus
+    human-friendly payload fields. Used for logging and HA events.
+    """
+    events: list[dict[str, Any]] = []
+    if prev_status != status:
+        events.append(
+            {"type": "status_changed", "old_status": prev_status, "new_status": status}
+        )
+
+    current = {c["clid"]: c for c in clients}
+    previous = {c["clid"]: c for c in prev_clients}
+    channel_names = {c["cid"]: c["name"] for c in channels}
+
+    for clid in sorted(current.keys() - previous.keys()):
+        client = current[clid]
+        events.append(
+            {
+                "type": "client_connected",
+                "clid": clid,
+                "nickname": client["nickname"],
+                "channel_id": client["cid"],
+                "channel": channel_names.get(client["cid"], ""),
+            }
+        )
+    for clid in sorted(previous.keys() - current.keys()):
+        events.append(
+            {
+                "type": "client_disconnected",
+                "clid": clid,
+                "nickname": previous[clid]["nickname"],
+            }
+        )
+    for clid in sorted(current.keys() & previous.keys()):
+        client, prev = current[clid], previous[clid]
+        if client["cid"] != prev["cid"]:
+            events.append(
+                {
+                    "type": "client_moved",
+                    "clid": clid,
+                    "nickname": client["nickname"],
+                    "from_channel_id": prev["cid"],
+                    "from_channel": channel_names.get(prev["cid"], ""),
+                    "to_channel_id": client["cid"],
+                    "to_channel": channel_names.get(client["cid"], ""),
+                }
+            )
+    return events
+
+
 def sort_channels(channels: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Return channels in display order: siblings by TeamSpeak's linked-list
     ``order`` field (0 = first, otherwise = cid of the preceding sibling),

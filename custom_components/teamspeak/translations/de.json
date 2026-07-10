@@ -76,6 +76,14 @@
       },
       "bandwidth_received": {
         "name": "Bandbreite empfangen"
+      },
+      "bans": {
+        "name": "Aktive Banns"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
       }
     }
   },
@@ -189,6 +197,183 @@
         "message": {
           "name": "Nachricht",
           "description": "Der Nachrichtentext."
+        }
+      }
+    },
+    "unban_client": {
+      "name": "Bann aufheben",
+      "description": "Löscht einen aktiven Bann (siehe Attribut 'bans' des Sensors „Aktive Banns“).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "ban_id": {
+          "name": "Bann-ID",
+          "description": "Die zu löschende ban_id."
+        }
+      }
+    },
+    "send_channel_message": {
+      "name": "Kanal-Nachricht senden",
+      "description": "Sendet eine Textnachricht in einen Kanal (der Query-Client wird dafür kurz dorthin bewegt).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "channel_id": {
+          "name": "Kanal-ID",
+          "description": "Die cid des Zielkanals."
+        },
+        "message": {
+          "name": "Nachricht",
+          "description": "Der Nachrichtentext."
+        }
+      }
+    },
+    "get_logs": {
+      "name": "Server-Logs abrufen",
+      "description": "Liefert die letzten Log-Zeilen des Servers als Antwortdaten.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "lines": {
+          "name": "Zeilen",
+          "description": "Anzahl der Log-Zeilen (1–100)."
+        },
+        "instance": {
+          "name": "Instanz-Log",
+          "description": "Instanz-Log statt des Logs des virtuellen Servers lesen."
+        }
+      }
+    },
+    "get_client_info": {
+      "name": "Client-Details abrufen",
+      "description": "Liefert Verbindungsdetails eines Clients (verbunden seit, Ping, Bytes, IP …).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "client_id": {
+          "name": "Client-ID",
+          "description": "Die clid des Clients."
+        }
+      }
+    },
+    "get_channel_info": {
+      "name": "Kanal-Details abrufen",
+      "description": "Liefert alle Details eines Kanals inklusive Beschreibung.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "channel_id": {
+          "name": "Kanal-ID",
+          "description": "Die cid des Kanals."
+        }
+      }
+    },
+    "create_channel": {
+      "name": "Kanal erstellen",
+      "description": "Erstellt einen neuen Kanal; liefert die neue Kanal-ID als Antwortdaten.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Kanalname."
+        },
+        "parent_id": {
+          "name": "Übergeordneter Kanal",
+          "description": "cid des Eltern-Kanals (weglassen = oberste Ebene)."
+        },
+        "topic": {
+          "name": "Thema",
+          "description": "Kanal-Thema."
+        },
+        "password": {
+          "name": "Passwort",
+          "description": "Kanal-Passwort."
+        },
+        "max_clients": {
+          "name": "Maximale Clients",
+          "description": "Client-Limit (weglassen = unbegrenzt)."
+        },
+        "channel_type": {
+          "name": "Typ",
+          "description": "Permanent, semi-permanent (bis Server-Neustart) oder temporär."
+        }
+      }
+    },
+    "edit_channel": {
+      "name": "Kanal bearbeiten",
+      "description": "Ändert Eigenschaften eines Kanals; nur angegebene Felder werden geändert.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "channel_id": {
+          "name": "Kanal-ID",
+          "description": "Die cid des Kanals."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Neuer Kanalname."
+        },
+        "topic": {
+          "name": "Thema",
+          "description": "Neues Thema."
+        },
+        "password": {
+          "name": "Passwort",
+          "description": "Neues Passwort (leerer Text entfernt es)."
+        },
+        "max_clients": {
+          "name": "Maximale Clients",
+          "description": "Neues Client-Limit."
+        },
+        "talk_power": {
+          "name": "Benötigte Talk-Power",
+          "description": "Talk-Power, die zum Sprechen nötig ist."
+        }
+      }
+    },
+    "delete_channel": {
+      "name": "Kanal löschen",
+      "description": "Löscht einen Kanal.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "Der TeamSpeak-Server, auf dem die Aktion ausgeführt wird (nur nötig bei mehreren Servern)."
+        },
+        "channel_id": {
+          "name": "Kanal-ID",
+          "description": "Die cid des Kanals."
+        },
+        "force": {
+          "name": "Erzwingen",
+          "description": "Auch löschen, wenn Clients darin sind (sie werden gekickt)."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "TeamSpeak-Optionen",
+        "data": {
+          "scan_interval": "Abfrage-Intervall (Sekunden)"
+        },
+        "data_description": {
+          "scan_interval": "Wie oft der Server abgefragt wird (10–300 Sekunden)."
         }
       }
     }

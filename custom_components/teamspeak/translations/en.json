@@ -76,6 +76,14 @@
       },
       "bandwidth_received": {
         "name": "Bandwidth received"
+      },
+      "bans": {
+        "name": "Active bans"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
       }
     }
   },
@@ -189,6 +197,183 @@
         "message": {
           "name": "Message",
           "description": "The message text."
+        }
+      }
+    },
+    "unban_client": {
+      "name": "Remove ban",
+      "description": "Deletes an active ban (see the 'bans' attribute of the Active bans sensor).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "ban_id": {
+          "name": "Ban ID",
+          "description": "The ban_id to delete."
+        }
+      }
+    },
+    "send_channel_message": {
+      "name": "Send channel message",
+      "description": "Posts a text message into a channel (the query client is moved there briefly).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "channel_id": {
+          "name": "Channel ID",
+          "description": "The cid of the target channel."
+        },
+        "message": {
+          "name": "Message",
+          "description": "The message text."
+        }
+      }
+    },
+    "get_logs": {
+      "name": "Get server logs",
+      "description": "Returns the most recent server log lines as response data.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "lines": {
+          "name": "Lines",
+          "description": "Number of log lines (1-100)."
+        },
+        "instance": {
+          "name": "Instance log",
+          "description": "Read the instance log instead of the virtual server log."
+        }
+      }
+    },
+    "get_client_info": {
+      "name": "Get client details",
+      "description": "Returns connection details of a client (connected time, ping, bytes, IP...).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "client_id": {
+          "name": "Client ID",
+          "description": "The clid of the client."
+        }
+      }
+    },
+    "get_channel_info": {
+      "name": "Get channel details",
+      "description": "Returns full details of a channel including its description.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "channel_id": {
+          "name": "Channel ID",
+          "description": "The cid of the channel."
+        }
+      }
+    },
+    "create_channel": {
+      "name": "Create channel",
+      "description": "Creates a new channel; returns the new channel id as response data.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Channel name."
+        },
+        "parent_id": {
+          "name": "Parent channel",
+          "description": "cid of the parent channel (omit for top level)."
+        },
+        "topic": {
+          "name": "Topic",
+          "description": "Channel topic."
+        },
+        "password": {
+          "name": "Password",
+          "description": "Channel password."
+        },
+        "max_clients": {
+          "name": "Maximum clients",
+          "description": "Client limit (omit = unlimited)."
+        },
+        "channel_type": {
+          "name": "Type",
+          "description": "Permanent, semi-permanent (until server restart) or temporary."
+        }
+      }
+    },
+    "edit_channel": {
+      "name": "Edit channel",
+      "description": "Changes properties of an existing channel; only provided fields are changed.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "channel_id": {
+          "name": "Channel ID",
+          "description": "The cid of the channel."
+        },
+        "name": {
+          "name": "Name",
+          "description": "New channel name."
+        },
+        "topic": {
+          "name": "Topic",
+          "description": "New topic."
+        },
+        "password": {
+          "name": "Password",
+          "description": "New password (empty string removes it)."
+        },
+        "max_clients": {
+          "name": "Maximum clients",
+          "description": "New client limit."
+        },
+        "talk_power": {
+          "name": "Needed talk power",
+          "description": "Talk power required to speak."
+        }
+      }
+    },
+    "delete_channel": {
+      "name": "Delete channel",
+      "description": "Deletes a channel.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "channel_id": {
+          "name": "Channel ID",
+          "description": "The cid of the channel."
+        },
+        "force": {
+          "name": "Force",
+          "description": "Also delete if clients are inside (they get kicked)."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "TeamSpeak options",
+        "data": {
+          "scan_interval": "Poll interval (seconds)"
+        },
+        "data_description": {
+          "scan_interval": "How often the server is queried (10-300 seconds)."
         }
       }
     }

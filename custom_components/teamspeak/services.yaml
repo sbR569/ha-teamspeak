@@ -131,3 +131,194 @@ broadcast_message:
       example: "Server wird in 5 Minuten neu gestartet"
       selector:
         text:
+
+unban_client:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    ban_id:
+      required: true
+      example: 5
+      selector:
+        number:
+          min: 1
+          mode: box
+
+send_channel_message:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    channel_id:
+      required: true
+      example: 105
+      selector:
+        number:
+          min: 1
+          mode: box
+    message:
+      required: true
+      example: "Lobby 1 startet gleich"
+      selector:
+        text:
+
+get_logs:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    lines:
+      required: false
+      default: 25
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: box
+    instance:
+      required: false
+      default: false
+      selector:
+        boolean:
+
+get_client_info:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    client_id:
+      required: true
+      example: 12
+      selector:
+        number:
+          min: 1
+          mode: box
+
+get_channel_info:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    channel_id:
+      required: true
+      example: 105
+      selector:
+        number:
+          min: 1
+          mode: box
+
+create_channel:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    name:
+      required: true
+      example: "Lobby 2"
+      selector:
+        text:
+    parent_id:
+      required: false
+      example: 103
+      selector:
+        number:
+          min: 0
+          mode: box
+    topic:
+      required: false
+      selector:
+        text:
+    password:
+      required: false
+      selector:
+        text:
+    max_clients:
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    channel_type:
+      required: false
+      default: permanent
+      selector:
+        select:
+          options:
+            - value: permanent
+              label: "Permanent"
+            - value: semi_permanent
+              label: "Semi-permanent"
+            - value: temporary
+              label: "Temporary"
+
+edit_channel:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    channel_id:
+      required: true
+      example: 105
+      selector:
+        number:
+          min: 1
+          mode: box
+    name:
+      required: false
+      selector:
+        text:
+    topic:
+      required: false
+      selector:
+        text:
+    password:
+      required: false
+      selector:
+        text:
+    max_clients:
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    talk_power:
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+
+delete_channel:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    channel_id:
+      required: true
+      example: 105
+      selector:
+        number:
+          min: 1
+          mode: box
+    force:
+      required: false
+      default: false
+      selector:
+        boolean:

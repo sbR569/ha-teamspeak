@@ -201,6 +201,8 @@ async def fetch_server_data(
             serverinfo["virtualserver_status"] = "online"
         channels = await client.command(f"channellist {CHANNELLIST_OPTIONS}")
         clients = await client.command(f"clientlist {CLIENTLIST_OPTIONS}")
+        bans = await _optional_command(client, "banlist")
+        groups = await _optional_command(client, "servergrouplist")
     finally:
         await client.close()
 
@@ -209,7 +211,70 @@ async def fetch_server_data(
         "serverinfo_denied": serverinfo_denied,
         "channels": channels,
         "clients": clients,
+        "bans": bans,
+        "server_groups": groups,
     }
+
+
+# "database empty result set" - e.g. banlist with no active bans.
+ERROR_DATABASE_EMPTY = 1281
+# Query login is valid but lacks the required permission.
+ERROR_INSUFFICIENT_RIGHTS = 2568
+# clientmove onto the channel the client is already in.
+ERROR_ALREADY_MEMBER = 770
+
+
+async def _optional_command(client: TS3QueryClient, cmd: str) -> list[dict[str, str]]:
+    """Run a command whose absence is fine: empty result or missing
+    permission yields [] instead of failing the poll."""
+    try:
+        return await client.command(cmd)
+    except TS3QueryError as err:
+        if err.error_id == ERROR_DATABASE_EMPTY:
+            return []
+        if err.error_id in (ERROR_INSUFFICIENT_RIGHTS, ERROR_ID_INVALID_LOGIN):
+            _LOGGER.debug("%r denied for this login (%s); skipping", cmd, err)
+            return []
+        raise
+
+
+async def send_channel_message_raw(
+    host: str,
+    port: int,
+    username: str,
+    password: str,
+    sid: int,
+    cid: int,
+    message: str,
+    timeout: float = 10.0,
+) -> None:
+    """Send a text message into a channel via raw ServerQuery.
+
+    sendtextmessage targetmode=2 posts into the query client's *current*
+    channel, so the whole whoami -> clientmove -> send sequence has to run
+    within one connection.
+    """
+    client = TS3QueryClient(host, port, timeout)
+    await client.connect()
+    try:
+        await client.command(f"login {escape(username)} {escape(password)}")
+        await client.command(f"use sid={sid}")
+        who = await client.command("whoami")
+        own_clid = int(who[0].get("client_id", 0)) if who else 0
+        try:
+            await client.command(
+                _build_command("clientmove", {"clid": own_clid, "cid": cid})
+            )
+        except TS3QueryError as err:
+            if err.error_id != ERROR_ALREADY_MEMBER:
+                raise
+        await client.command(
+            _build_command(
+                "sendtextmessage", {"targetmode": 2, "target": cid, "msg": message}
+            )
+        )
+    finally:
+        await client.close()
 
 
 async def execute_command_raw(

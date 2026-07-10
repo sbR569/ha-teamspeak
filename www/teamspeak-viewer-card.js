@@ -12,7 +12,8 @@
  *   status_entity: sensor.teamspeak_<host>_status
  *   max_clients_entity: sensor.teamspeak_<host>_maximale_clients
  *   show_spacers: true      # Spacer-Kanäle als Trenner rendern
- *   show_actions: true      # Klick-Aktionen (poke/move/kick/ban) aktivieren
+ *   show_actions: true      # Klick-Aktionen: Clients (poke/move/kick/ban)
+ *                           # und Kanäle (Nachricht/erstellen/umbenennen/löschen)
  *   max_height: 480         # px, Baum scrollt darüber hinaus
  */
 (function () {
@@ -84,6 +85,7 @@
         ...config,
       };
       this._selectedClid = null;
+      this._selectedCid = null;
       this._moveClid = null;
       this._signature = null;
     }
@@ -105,6 +107,7 @@
         st?.state,
         mx?.state,
         this._selectedClid,
+        this._selectedCid,
         this._moveClid,
       ]);
       if (signature === this._signature) return;
@@ -149,6 +152,13 @@
           channel.parent_id === 0 ? 0 : (depth.get(channel.parent_id) ?? 0) + 1;
         depth.set(channel.cid, d);
         rows.push(this._channelRow(channel, d));
+        if (
+          this._selectedCid === channel.cid &&
+          this._config.show_actions &&
+          !parseSpacer(channel.name)
+        ) {
+          rows.push(this._channelActionBar(channel, d));
+        }
         for (const client of byChannel.get(channel.cid) || []) {
           rows.push(this._clientRow(client, d + 1));
           if (this._selectedClid === client.clid && this._config.show_actions) {
@@ -313,9 +323,27 @@
         </div>`;
     }
 
+    _channelActionBar(channel, depth) {
+      const indent = `style="margin-left:${depth * 18}px"`;
+      const btn = (action, icon, label, danger = false) =>
+        `<button class="${danger ? "danger" : ""}" data-caction="${action}"
+           data-cid="${channel.cid}">
+           <ha-icon icon="${icon}"></ha-icon>${label}</button>`;
+      return `<div class="actions" ${indent}>
+          ${btn("ch-msg", "mdi:message-text-outline", "Nachricht")}
+          ${btn("ch-create", "mdi:plus-box-outline", "Unterkanal")}
+          ${btn("ch-rename", "mdi:pencil-outline", "Umbenennen")}
+          ${btn("ch-delete", "mdi:delete-outline", "Löschen", true)}
+        </div>`;
+    }
+
     _clientName(clid) {
       const client = this._clients().find((c) => c.clid === clid);
       return client ? client.nickname : `clid ${clid}`;
+    }
+
+    _channel(cid) {
+      return this._channels().find((c) => c.cid === cid);
     }
 
     _rerender() {
@@ -344,11 +372,20 @@
 
     _onClick(ev) {
       const actionEl = ev.target.closest("[data-action]");
+      const channelActionEl = ev.target.closest("[data-caction]");
       const row = ev.target.closest(".row");
 
       if (actionEl) {
         ev.stopPropagation();
         this._handleAction(actionEl.dataset.action, Number(actionEl.dataset.clid));
+        return;
+      }
+      if (channelActionEl) {
+        ev.stopPropagation();
+        this._handleChannelAction(
+          channelActionEl.dataset.caction,
+          Number(channelActionEl.dataset.cid)
+        );
         return;
       }
 
@@ -369,7 +406,66 @@
       if (row?.dataset.clid !== undefined && this._config.show_actions) {
         const clid = Number(row.dataset.clid);
         this._selectedClid = this._selectedClid === clid ? null : clid;
+        this._selectedCid = null;
         this._rerender();
+        return;
+      }
+
+      if (row?.dataset.cid !== undefined && this._config.show_actions) {
+        const cid = Number(row.dataset.cid);
+        this._selectedCid = this._selectedCid === cid ? null : cid;
+        this._selectedClid = null;
+        this._rerender();
+      }
+    }
+
+    _handleChannelAction(action, cid) {
+      const channel = this._channel(cid);
+      const name = channel ? channel.name : `cid ${cid}`;
+      switch (action) {
+        case "ch-msg": {
+          const message = prompt(`Nachricht in Kanal "${name}":`);
+          if (message)
+            this._call(
+              "send_channel_message",
+              { channel_id: cid, message },
+              "Kanal-Nachricht gesendet"
+            );
+          break;
+        }
+        case "ch-create": {
+          const newName = prompt(`Neuer Unterkanal unter "${name}" – Name:`);
+          if (newName)
+            this._call(
+              "create_channel",
+              { name: newName, parent_id: cid },
+              `Kanal "${newName}" erstellt`
+            );
+          break;
+        }
+        case "ch-rename": {
+          const newName = prompt("Neuer Kanalname:", name);
+          if (newName && newName !== name)
+            this._call(
+              "edit_channel",
+              { channel_id: cid, name: newName },
+              "Kanal umbenannt"
+            );
+          break;
+        }
+        case "ch-delete": {
+          const occupied = channel && channel.clients > 0;
+          const question = occupied
+            ? `Kanal "${name}" ist nicht leer (${channel.clients} Client(s) werden gekickt). Trotzdem löschen?`
+            : `Kanal "${name}" wirklich löschen?`;
+          if (confirm(question))
+            this._call(
+              "delete_channel",
+              { channel_id: cid, force: Boolean(occupied) },
+              `Kanal "${name}" gelöscht`
+            );
+          break;
+        }
       }
     }
 

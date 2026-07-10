@@ -17,6 +17,7 @@ from homeassistant.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
+    CONF_SCAN_INTERVAL,
     CONF_SSL,
     CONF_USERNAME,
 )
@@ -25,10 +26,24 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_SID, DOMAIN, SCAN_INTERVAL
-from .model import normalize_channels, normalize_clients
-from .ts3query import TS3QueryError, execute_command_raw, fetch_server_data
+from .const import CONF_SID, DEFAULT_SCAN_INTERVAL, DOMAIN, EVENT_TEAMSPEAK
+from .model import (
+    diff_snapshots,
+    normalize_bans,
+    normalize_channels,
+    normalize_clients,
+    normalize_server_groups,
+    resolve_group_names,
+)
+from .const import TEXT_TARGET_CHANNEL
+from .ts3query import (
+    TS3QueryError,
+    execute_command_raw,
+    fetch_server_data,
+    send_channel_message_raw,
+)
 from .webquery import (
+    ERROR_ALREADY_MEMBER,
     WebQueryError,
     execute_command_webquery,
     fetch_server_data_webquery,
@@ -70,6 +85,8 @@ class TeamSpeakData:
     channels: list[dict[str, Any]] = field(default_factory=list)
     clients: list[dict[str, Any]] = field(default_factory=list)
     query_clients: int = 0
+    bans: list[dict[str, Any]] = field(default_factory=list)
+    server_groups: dict[int, str] = field(default_factory=dict)
     ping: float | None = None
     packet_loss: float | None = None
     bandwidth_sent: int | None = None
@@ -87,7 +104,9 @@ class TeamSpeakCoordinator(DataUpdateCoordinator[TeamSpeakData]):
             _LOGGER,
             config_entry=entry,
             name=f"{DOMAIN} {entry.data[CONF_HOST]}",
-            update_interval=SCAN_INTERVAL,
+            update_interval=timedelta(
+                seconds=entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+            ),
         )
         self._unreachable = False
         self._scope_warning_logged = False
@@ -121,17 +140,18 @@ class TeamSpeakCoordinator(DataUpdateCoordinator[TeamSpeakData]):
             data[CONF_SID],
         )
 
-    async def async_execute_command(
+    async def async_query_command(
         self, command: str, params: dict[str, Any]
     ) -> list[dict[str, Any]]:
-        """Run a management command against the server, then refresh sensors.
+        """Run a read-only command (logview, clientinfo, ...) and return the
+        parsed items - no sensor refresh, no info logging.
 
         Raises WebQueryError / TS3QueryError on server-side failures (e.g. an
         insufficient API-key scope); callers translate those for the user.
         """
         data = self.config_entry.data
         if self.uses_webquery:
-            result = await execute_command_webquery(
+            return await execute_command_webquery(
                 async_get_clientsession(self.hass),
                 data[CONF_HOST],
                 data[CONF_PORT],
@@ -141,19 +161,65 @@ class TeamSpeakCoordinator(DataUpdateCoordinator[TeamSpeakData]):
                 params,
                 use_ssl=data.get(CONF_SSL, False),
             )
+        return await execute_command_raw(
+            data[CONF_HOST],
+            data[CONF_PORT],
+            data[CONF_USERNAME],
+            data[CONF_PASSWORD],
+            data[CONF_SID],
+            command,
+            params,
+        )
+
+    async def async_execute_command(
+        self, command: str, params: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        """Run a management command against the server, then refresh sensors."""
+        result = await self.async_query_command(command, params)
+        _LOGGER.info("Executed %s %s on %s", command, params, self.server_name)
+        await self.async_request_refresh()
+        return result
+
+    async def async_send_channel_message(self, channel_id: int, message: str) -> None:
+        """Post a text message into a channel.
+
+        targetmode=2 posts into the query client's current channel, so the
+        client is moved into the target channel first (whoami -> clientmove).
+        """
+        if self.uses_webquery:
+            # WebQuery keeps one server-side session per API key, so the
+            # sequence works across separate HTTP requests.
+            who = await self.async_query_command("whoami", {})
+            own_clid = int(who[0].get("client_id", 0)) if who else 0
+            try:
+                await self.async_query_command(
+                    "clientmove", {"clid": own_clid, "cid": channel_id}
+                )
+            except WebQueryError as err:
+                if err.code != ERROR_ALREADY_MEMBER:
+                    raise
+            await self.async_query_command(
+                "sendtextmessage",
+                {
+                    "targetmode": TEXT_TARGET_CHANNEL,
+                    "target": channel_id,
+                    "msg": message,
+                },
+            )
         else:
-            result = await execute_command_raw(
+            data = self.config_entry.data
+            await send_channel_message_raw(
                 data[CONF_HOST],
                 data[CONF_PORT],
                 data[CONF_USERNAME],
                 data[CONF_PASSWORD],
                 data[CONF_SID],
-                command,
-                params,
+                channel_id,
+                message,
             )
-        _LOGGER.info("Executed %s %s on %s", command, params, self.server_name)
-        await self.async_request_refresh()
-        return result
+        _LOGGER.info(
+            "Sent channel message to cid=%s on %s", channel_id, self.server_name
+        )
 
     async def _async_update_data(self) -> TeamSpeakData:
         host = self.config_entry.data[CONF_HOST]
@@ -202,11 +268,14 @@ class TeamSpeakCoordinator(DataUpdateCoordinator[TeamSpeakData]):
         info = raw["serverinfo"]
         channels = normalize_channels(raw.get("channels", []))
         clients, query_clients = normalize_clients(raw.get("clients", []))
+        bans = normalize_bans(raw.get("bans", []))
+        server_groups = normalize_server_groups(raw.get("server_groups", []))
+        resolve_group_names(clients, server_groups)
         client_names = [client["nickname"] for client in clients]
 
         online_since = self._compute_online_since(info, host)
         status = info.get("virtualserver_status", "unknown")
-        self._log_changes(status, client_names, clients, channels)
+        self._handle_changes(status, clients, channels)
 
         _LOGGER.debug(
             "Poll of %s:%s via %s ok in %.0f ms: status=%s, clients=%d (+%d query), "
@@ -242,6 +311,8 @@ class TeamSpeakCoordinator(DataUpdateCoordinator[TeamSpeakData]):
             channels=channels,
             clients=clients,
             query_clients=query_clients,
+            bans=bans,
+            server_groups=server_groups,
             ping=round(ping, 1) if ping is not None else None,
             packet_loss=round(loss * 100, 2) if loss is not None else None,
             bandwidth_sent=int(sent) if sent is not None else None,
@@ -267,36 +338,43 @@ class TeamSpeakCoordinator(DataUpdateCoordinator[TeamSpeakData]):
             )
         return online_since
 
-    def _log_changes(
+    def _handle_changes(
         self,
         status: str,
-        client_names: list[str],
         clients: list[dict[str, Any]],
         channels: list[dict[str, Any]],
     ) -> None:
-        """Log status transitions and clients joining/leaving/moving."""
+        """Log changes between polls and fire them as HA events."""
         if self.data is None:
             return
-        if self.data.status != status:
-            _LOGGER.info("Server status changed: %s -> %s", self.data.status, status)
-
-        names = {c["clid"]: c["nickname"] for c in clients}
-        prev_names = {c["clid"]: c["nickname"] for c in self.data.clients}
-        joined = [names[clid] for clid in names.keys() - prev_names.keys()]
-        left = [prev_names[clid] for clid in prev_names.keys() - names.keys()]
-        if joined:
-            _LOGGER.info("Client(s) connected: %s", ", ".join(sorted(joined)))
-        if left:
-            _LOGGER.info("Client(s) disconnected: %s", ", ".join(sorted(left)))
-
-        # Log channel moves for clients present in both snapshots.
-        channel_names = {c["cid"]: c["name"] for c in channels}
-        prev_channel = {c["clid"]: c["cid"] for c in self.data.clients}
-        for client in clients:
-            old_cid = prev_channel.get(client["clid"])
-            if old_cid is not None and old_cid != client["cid"]:
+        events = diff_snapshots(
+            self.data.clients, clients, channels, self.data.status, status
+        )
+        for event in events:
+            kind = event["type"]
+            if kind == "status_changed":
                 _LOGGER.info(
-                    "%s moved to channel '%s'",
-                    client["nickname"],
-                    channel_names.get(client["cid"], client["cid"]),
+                    "Server status changed: %s -> %s",
+                    event["old_status"],
+                    event["new_status"],
                 )
+            elif kind == "client_connected":
+                _LOGGER.info(
+                    "Client connected: %s (channel '%s')",
+                    event["nickname"],
+                    event["channel"],
+                )
+            elif kind == "client_disconnected":
+                _LOGGER.info("Client disconnected: %s", event["nickname"])
+            elif kind == "client_moved":
+                _LOGGER.info(
+                    "%s moved to channel '%s'", event["nickname"], event["to_channel"]
+                )
+            self.hass.bus.async_fire(
+                EVENT_TEAMSPEAK,
+                {
+                    "entry_id": self.config_entry.entry_id,
+                    "host": self.server_name,
+                    **event,
+                },
+            )

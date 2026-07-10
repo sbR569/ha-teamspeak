@@ -92,6 +92,7 @@ SENSORS: tuple[TeamSpeakSensorDescription, ...] = (
             "client_names": data.client_names,
             "clients": data.clients,
             "query_clients": data.query_clients,
+            "server_groups": data.server_groups,
         },
     ),
     TeamSpeakSensorDescription(
@@ -110,6 +111,15 @@ SENSORS: tuple[TeamSpeakSensorDescription, ...] = (
         # 'channels' is the full tree (cid/parent_id/order + metadata); a card
         # combines it with the clients' 'cid' to render the channel viewer.
         attributes_fn=lambda data: {"channels": data.channels},
+    ),
+    TeamSpeakSensorDescription(
+        key="bans",
+        translation_key="bans",
+        icon="mdi:gavel",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: len(data.bans),
+        # Full ban details (who, why, until when) for dashboards.
+        attributes_fn=lambda data: {"bans": data.bans},
     ),
     # Connection quality / traffic (from serverinfo; unknown with a read-only
     # TeamSpeak 6 API key, which is denied the serverinfo command).

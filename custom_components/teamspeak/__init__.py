@@ -10,9 +10,16 @@ from .const import DOMAIN
 from .coordinator import TeamSpeakCoordinator
 from .services import async_setup_services, async_unload_services
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 type TeamSpeakConfigEntry = ConfigEntry[TeamSpeakCoordinator]
+
+
+async def _async_options_updated(
+    hass: HomeAssistant, entry: TeamSpeakConfigEntry
+) -> None:
+    """Reload the entry when options (e.g. the poll interval) change."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: TeamSpeakConfigEntry) -> bool:
@@ -21,6 +28,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TeamSpeakConfigEntry) ->
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async_setup_services(hass)

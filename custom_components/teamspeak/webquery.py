@@ -23,6 +23,10 @@ _LOGGER = logging.getLogger(__name__)
 _AUTH_ERROR_CODES = {401, 403, 5122, 5124, 5125, 5126, 5127}
 # Error code returned when the key is valid but lacks the required permission.
 ERROR_INSUFFICIENT_RIGHTS = 2568
+# "database empty result set" - e.g. banlist with no active bans.
+ERROR_DATABASE_EMPTY = 1281
+# clientmove onto the channel the client is already in.
+ERROR_ALREADY_MEMBER = 770
 
 
 class WebQueryError(Exception):
@@ -130,13 +134,39 @@ async def fetch_server_data_webquery(
     clients = await _request(
         session, base_url, api_key, f"clientlist{_options_query(CLIENTLIST_OPTIONS)}", timeout
     )
+    bans = await _optional_request(session, base_url, api_key, "banlist", timeout)
+    groups = await _optional_request(
+        session, base_url, api_key, "servergrouplist", timeout
+    )
 
     return {
         "serverinfo": serverinfo,
         "serverinfo_denied": serverinfo_denied,
         "channels": channels,
         "clients": clients,
+        "bans": bans,
+        "server_groups": groups,
     }
+
+
+async def _optional_request(
+    session: aiohttp.ClientSession,
+    base_url: str,
+    api_key: str,
+    command: str,
+    timeout: float,
+) -> list[dict[str, Any]]:
+    """Run a command whose absence is fine: empty result or missing
+    permission (low-scope key) yields [] instead of failing the poll."""
+    try:
+        return await _request(session, base_url, api_key, command, timeout)
+    except WebQueryError as err:
+        if err.code == ERROR_DATABASE_EMPTY:
+            return []
+        if err.is_auth_error or err.is_permission_error:
+            _LOGGER.debug("%r denied for this API key (%s); skipping", command, err)
+            return []
+        raise
 
 
 async def execute_command_webquery(
