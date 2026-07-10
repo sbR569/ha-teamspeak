@@ -44,6 +44,7 @@ from .const import (
     ATTR_SCOPE,
     ATTR_TALK_POWER,
     ATTR_TOPIC,
+    ATTR_WELCOME_MESSAGE,
     CHANNEL_TYPE_PERMANENT,
     CHANNEL_TYPE_SEMI_PERMANENT,
     CHANNEL_TYPE_TEMPORARY,
@@ -58,6 +59,7 @@ from .const import (
     SERVICE_CREATE_CHANNEL,
     SERVICE_DELETE_CHANNEL,
     SERVICE_EDIT_CHANNEL,
+    SERVICE_EDIT_SERVER,
     SERVICE_GET_CHANNEL_INFO,
     SERVICE_GET_CLIENT_INFO,
     SERVICE_GET_LOGS,
@@ -183,6 +185,14 @@ _DELETE_CHANNEL_SCHEMA = vol.Schema(
         **_ENTRY_FIELD,
         vol.Required(ATTR_CHANNEL_ID): vol.Coerce(int),
         vol.Optional(ATTR_FORCE, default=False): cv.boolean,
+    }
+)
+_EDIT_SERVER_SCHEMA = vol.Schema(
+    {
+        **_ENTRY_FIELD,
+        vol.Optional(ATTR_NAME): cv.string,
+        vol.Optional(ATTR_WELCOME_MESSAGE): cv.string,
+        vol.Optional(ATTR_MAX_CLIENTS): vol.All(vol.Coerce(int), vol.Range(min=1)),
     }
 )
 _CHANNEL_MESSAGE_SCHEMA = vol.Schema(
@@ -437,6 +447,23 @@ def async_setup_services(hass: HomeAssistant) -> None:
             params["channel_flag_maxclients_unlimited"] = 0
         await _run(coordinator, "channeledit", params)
 
+    async def edit_server(call: ServiceCall) -> None:
+        coordinator = _get_coordinator(hass, call)
+        params: dict = {}
+        for field, ts_key in (
+            (ATTR_NAME, "virtualserver_name"),
+            (ATTR_WELCOME_MESSAGE, "virtualserver_welcomemessage"),
+            (ATTR_MAX_CLIENTS, "virtualserver_maxclients"),
+        ):
+            if field in call.data:
+                params[ts_key] = call.data[field]
+        if not params:
+            raise ServiceValidationError(
+                "Nothing to change - provide at least one of: name, "
+                "welcome_message, max_clients"
+            )
+        await _run(coordinator, "serveredit", params)
+
     async def delete_channel(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass, call)
         await _run(
@@ -501,6 +528,9 @@ def async_setup_services(hass: HomeAssistant) -> None:
     hass.services.async_register(
         DOMAIN, SERVICE_DELETE_CHANNEL, delete_channel, schema=_DELETE_CHANNEL_SCHEMA
     )
+    hass.services.async_register(
+        DOMAIN, SERVICE_EDIT_SERVER, edit_server, schema=_EDIT_SERVER_SCHEMA
+    )
 
 
 def async_unload_services(hass: HomeAssistant) -> None:
@@ -520,5 +550,6 @@ def async_unload_services(hass: HomeAssistant) -> None:
         SERVICE_CREATE_CHANNEL,
         SERVICE_EDIT_CHANNEL,
         SERVICE_DELETE_CHANNEL,
+        SERVICE_EDIT_SERVER,
     ):
         hass.services.async_remove(DOMAIN, service)

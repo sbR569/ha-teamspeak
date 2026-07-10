@@ -25,6 +25,7 @@ cards:
     clients_entity: sensor.teamspeak_meinserver_verbundene_clients
     status_entity: sensor.teamspeak_meinserver_status
     max_clients_entity: sensor.teamspeak_meinserver_maximale_clients
+    bans_entity: sensor.teamspeak_meinserver_aktive_banns
     show_spacers: true
     show_actions: true
     max_height: 560

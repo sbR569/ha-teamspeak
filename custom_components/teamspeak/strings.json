@@ -346,6 +346,28 @@
         }
       }
     },
+    "edit_server": {
+      "name": "Edit server",
+      "description": "Changes global settings of the virtual server; only provided fields are changed.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Server",
+          "description": "The TeamSpeak server to act on (only needed if you have more than one)."
+        },
+        "name": {
+          "name": "Server name",
+          "description": "New name of the virtual server."
+        },
+        "welcome_message": {
+          "name": "Welcome message",
+          "description": "New welcome message shown to connecting clients."
+        },
+        "max_clients": {
+          "name": "Maximum clients",
+          "description": "New client limit of the virtual server."
+        }
+      }
+    },
     "delete_channel": {
       "name": "Delete channel",
       "description": "Deletes a channel.",

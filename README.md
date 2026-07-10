@@ -87,6 +87,7 @@ with `scope=write` or `scope=manage`, see below):
 | `teamspeak.get_logs` | Latest server log lines as response data (`lines`: 1–100, `instance` for the instance log) |
 | `teamspeak.get_client_info` | Connection details of a client as response data (connected since, ping, bytes, IP …) |
 | `teamspeak.get_channel_info` | Full details of a channel as response data (including its description) |
+| `teamspeak.edit_server` | Edit global server settings (server name, welcome message, max clients — only the provided fields) |
 
 All services expect the **`client_id`** (`clid`) or **`channel_id`** (`cid`)
 from the sensor attributes. With only one configured server the
@@ -286,9 +287,12 @@ that renders the channel tree like the TeamSpeak client:
 - **Clicking a client** opens the action bar: poke, message, move (then click
   the target channel), kick (channel/server), ban — destructive actions with a
   confirmation dialog
-- **Clicking a channel** opens the channel actions: message the channel,
-  create sub-channel, rename, delete (asks first; kicks any clients inside via
-  `force` if needed)
+- **Clicking a channel** opens the channel actions: details (topic,
+  description, codec, type …), message the channel, create sub-channel,
+  rename, delete (asks first; kicks any clients inside via `force` if needed)
+- **Clicking the server name** opens the server menu: rename server, welcome
+  message, client limit, broadcast, ban list with one-click unban (needs
+  `bans_entity`), and the latest server log lines
 - Megaphone button in the header for broadcasts
 - Automatically follows the HA theme (light/dark)
 
@@ -307,6 +311,7 @@ channels_entity: sensor.teamspeak_myserver_channels
 clients_entity: sensor.teamspeak_myserver_clients_connected
 status_entity: sensor.teamspeak_myserver_status
 max_clients_entity: sensor.teamspeak_myserver_maximum_clients
+bans_entity: sensor.teamspeak_myserver_active_bans   # enables the ban list in the server menu
 show_spacers: true    # show spacers
 show_actions: true    # click actions (false = display only)
 max_height: 560       # optional, px

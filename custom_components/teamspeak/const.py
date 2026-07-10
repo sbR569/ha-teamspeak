@@ -34,6 +34,7 @@ SERVICE_GET_CHANNEL_INFO = "get_channel_info"
 SERVICE_CREATE_CHANNEL = "create_channel"
 SERVICE_EDIT_CHANNEL = "edit_channel"
 SERVICE_DELETE_CHANNEL = "delete_channel"
+SERVICE_EDIT_SERVER = "edit_server"
 
 # Service field names
 ATTR_CONFIG_ENTRY_ID = "config_entry_id"
@@ -54,6 +55,7 @@ ATTR_PARENT_ID = "parent_id"
 ATTR_CHANNEL_TYPE = "channel_type"
 ATTR_TALK_POWER = "talk_power"
 ATTR_FORCE = "force"
+ATTR_WELCOME_MESSAGE = "welcome_message"
 
 CHANNEL_TYPE_PERMANENT = "permanent"
 CHANNEL_TYPE_SEMI_PERMANENT = "semi_permanent"

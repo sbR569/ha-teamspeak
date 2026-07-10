@@ -303,6 +303,29 @@ edit_channel:
           min: 0
           mode: box
 
+edit_server:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: teamspeak
+    name:
+      required: false
+      example: "Budenzauber"
+      selector:
+        text:
+    welcome_message:
+      required: false
+      selector:
+        text:
+    max_clients:
+      required: false
+      selector:
+        number:
+          min: 1
+          mode: box
+
 delete_channel:
   fields:
     config_entry_id:

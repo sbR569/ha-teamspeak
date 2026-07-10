@@ -11,9 +11,11 @@
  *   title: Mein TeamSpeak
  *   status_entity: sensor.teamspeak_<host>_status
  *   max_clients_entity: sensor.teamspeak_<host>_maximale_clients
+ *   bans_entity: sensor.teamspeak_<host>_aktive_banns   # für die Bannliste
  *   show_spacers: true      # Spacer-Kanäle als Trenner rendern
- *   show_actions: true      # Klick-Aktionen: Clients (poke/move/kick/ban)
- *                           # und Kanäle (Nachricht/erstellen/umbenennen/löschen)
+ *   show_actions: true      # Klick-Aktionen: Clients (poke/move/kick/ban),
+ *                           # Kanäle (Nachricht/erstellen/umbenennen/löschen/Details)
+ *                           # und Server-Menü (Klick auf den Titel)
  *   max_height: 480         # px, Baum scrollt darüber hinaus
  */
 (function () {
@@ -35,6 +37,18 @@
       ...[...code.toUpperCase()].map((ch) => base + ch.charCodeAt(0) - 65)
     );
   };
+
+  const tsDate = (unix) =>
+    unix ? new Date(unix * 1000).toLocaleString() : "";
+
+  const CODEC_NAMES = [
+    "Speex Narrowband",
+    "Speex Wideband",
+    "Speex Ultra-Wideband",
+    "CELT Mono",
+    "Opus Voice",
+    "Opus Music",
+  ];
 
   const idleText = (seconds) => {
     if (!seconds || seconds < 60) return "";
@@ -87,6 +101,10 @@
       this._selectedClid = null;
       this._selectedCid = null;
       this._moveClid = null;
+      this._serverMenu = false;
+      this._showBans = false;
+      this._logLines = null;
+      this._channelInfo = null;
       this._signature = null;
     }
 
@@ -101,14 +119,23 @@
         ? hass.states[this._config.max_clients_entity]
         : null;
 
+      const bn = this._config.bans_entity
+        ? hass.states[this._config.bans_entity]
+        : null;
+
       const signature = JSON.stringify([
         ch?.attributes?.channels,
         cl?.attributes?.clients,
         st?.state,
         mx?.state,
+        bn?.attributes?.bans,
         this._selectedClid,
         this._selectedCid,
         this._moveClid,
+        this._serverMenu,
+        this._showBans,
+        this._logLines,
+        this._channelInfo,
       ]);
       if (signature === this._signature) return;
       this._signature = signature;
@@ -129,6 +156,12 @@
       return (
         this._hass?.states[this._config.clients_entity]?.attributes?.clients || []
       );
+    }
+
+    _bans() {
+      return this._config.bans_entity
+        ? this._hass?.states[this._config.bans_entity]?.attributes?.bans || []
+        : [];
     }
 
     _render(ch, cl, st, mx) {
@@ -158,6 +191,9 @@
           !parseSpacer(channel.name)
         ) {
           rows.push(this._channelActionBar(channel, d));
+          if (this._channelInfo && this._channelInfo.cid === channel.cid) {
+            rows.push(this._channelInfoPanel(this._channelInfo.data, d));
+          }
         }
         for (const client of byChannel.get(channel.cid) || []) {
           rows.push(this._clientRow(client, d + 1));
@@ -238,10 +274,49 @@
               font-size:0.9em; }
             ${CARD_TYPE} .banner .link { border:none; background:none;
               color: var(--primary-color); cursor:pointer; font:inherit; }
+            ${CARD_TYPE} .head .name.clickable { cursor:pointer; }
+            ${CARD_TYPE} .head .name ha-icon { --mdc-icon-size:16px;
+              color: var(--secondary-text-color); vertical-align:middle; }
+            ${CARD_TYPE} .smenu { margin:0 16px 8px; padding:8px 10px;
+              border-radius:8px; background: var(--secondary-background-color); }
+            ${CARD_TYPE} .smenu .actions { padding:0; }
+            ${CARD_TYPE} .smenu .actions button,
+            ${CARD_TYPE} .smenu .banrow button {
+              background: var(--card-background-color, var(--ha-card-background)); }
+            ${CARD_TYPE} .smenu .hint { color: var(--secondary-text-color);
+              font-size:0.85em; padding:6px 2px 0; }
+            ${CARD_TYPE} .banrow { display:flex; align-items:center; gap:8px;
+              padding:6px 2px; font-size:0.9em; }
+            ${CARD_TYPE} .banrow + .banrow { border-top:1px solid
+              var(--divider-color, rgba(127,127,127,0.2)); }
+            ${CARD_TYPE} .banrow .meta { display:block; }
+            ${CARD_TYPE} .banrow button { display:flex; align-items:center;
+              gap:4px; border:none; border-radius:6px; padding:4px 8px;
+              cursor:pointer; color: var(--primary-text-color); font:inherit;
+              font-size:0.82em; flex:none; }
+            ${CARD_TYPE} .logbox { font-family:monospace; font-size:0.72em;
+              white-space:pre-wrap; word-break:break-all; max-height:220px;
+              overflow-y:auto; margin-top:8px; padding:6px 8px;
+              border-radius:6px; background: var(--card-background-color,
+              var(--ha-card-background)); }
+            ${CARD_TYPE} .info { padding:6px 10px; margin:2px 8px 6px;
+              border-radius:8px; background: var(--secondary-background-color);
+              font-size:0.88em; }
+            ${CARD_TYPE} .info .il { display:flex; gap:10px; padding:1px 0; }
+            ${CARD_TYPE} .info .il .lbl { color: var(--secondary-text-color);
+              min-width:110px; flex:none; }
           </style>
           <div class="head">
             <span class="dot ${online ? "on" : ""}" title="${esc(status)}"></span>
-            <span class="name">${esc(this._config.title)}</span>
+            <span class="name ${this._config.show_actions ? "clickable" : ""}"
+              data-action="server-menu"
+              title="${this._config.show_actions ? "Server verwalten" : ""}">
+              ${esc(this._config.title)}${
+                this._config.show_actions
+                  ? ` <ha-icon icon="mdi:chevron-${this._serverMenu ? "up" : "down"}"></ha-icon>`
+                  : ""
+              }
+            </span>
             <span class="cnt">${count}${max} online</span>
             ${
               this._config.show_actions
@@ -251,6 +326,7 @@
                 : ""
             }
           </div>
+          ${this._serverMenu && this._config.show_actions ? this._serverMenuHtml() : ""}
           ${moveBanner}
           <div class="tree">${rows.join("")}</div>
         </ha-card>`;
@@ -329,11 +405,94 @@
         `<button class="${danger ? "danger" : ""}" data-caction="${action}"
            data-cid="${channel.cid}">
            <ha-icon icon="${icon}"></ha-icon>${label}</button>`;
+      const infoOpen = this._channelInfo && this._channelInfo.cid === channel.cid;
       return `<div class="actions" ${indent}>
+          ${btn("ch-info", infoOpen ? "mdi:information-off-outline" : "mdi:information-outline", "Details")}
           ${btn("ch-msg", "mdi:message-text-outline", "Nachricht")}
           ${btn("ch-create", "mdi:plus-box-outline", "Unterkanal")}
           ${btn("ch-rename", "mdi:pencil-outline", "Umbenennen")}
           ${btn("ch-delete", "mdi:delete-outline", "Löschen", true)}
+        </div>`;
+    }
+
+    _channelInfoPanel(info, depth) {
+      const line = (label, value) =>
+        value === "" || value === null || value === undefined
+          ? ""
+          : `<div class="il"><span class="lbl">${label}</span>
+               <span>${esc(value)}</span></div>`;
+      const type = info.is_permanent
+        ? "Permanent"
+        : info.is_semi_permanent
+          ? "Semi-permanent"
+          : "Temporär";
+      const codec = CODEC_NAMES[info.codec]
+        ? `${CODEC_NAMES[info.codec]} (Qualität ${info.codec_quality})`
+        : "";
+      return `<div class="info" style="margin-left:${8 + depth * 18}px">
+          ${line("Topic", info.topic)}
+          ${line("Beschreibung", info.description)}
+          ${line("Typ", type)}
+          ${line("Codec", codec)}
+          ${line("Max. Clients", info.max_clients < 0 ? "unbegrenzt" : info.max_clients)}
+          ${line("Talk-Power", info.talk_power)}
+          ${line("Passwort", info.password_protected ? "ja" : "nein")}
+        </div>`;
+    }
+
+    _serverMenuHtml() {
+      const btn = (action, icon, label) =>
+        `<button data-saction="${action}">
+           <ha-icon icon="${icon}"></ha-icon>${label}</button>`;
+      const bans = this._bans();
+      const bansLabel = this._config.bans_entity
+        ? `Bannliste (${bans.length})`
+        : "Bannliste";
+
+      let bansSection = "";
+      if (this._showBans) {
+        if (!this._config.bans_entity) {
+          bansSection = `<div class="hint">Dafür in der Karten-Konfiguration
+            <b>bans_entity</b> setzen (Sensor „Aktive Banns“).</div>`;
+        } else if (!bans.length) {
+          bansSection = `<div class="hint">Keine aktiven Banns.</div>`;
+        } else {
+          bansSection = bans
+            .map((b) => {
+              const who =
+                b.last_nickname || b.name || b.ip || b.uid || `#${b.ban_id}`;
+              const until = b.expires
+                ? `bis ${tsDate(b.expires)}`
+                : "dauerhaft";
+              return `<div class="banrow">
+                  <div class="grow">
+                    <b>${esc(who)}</b>${b.reason ? ` – ${esc(b.reason)}` : ""}
+                    <span class="meta">von ${esc(b.invoker || "?")} · ${until}</span>
+                  </div>
+                  <button data-saction="sv-unban" data-banid="${b.ban_id}">
+                    <ha-icon icon="mdi:account-lock-open-outline"></ha-icon>Entbannen
+                  </button>
+                </div>`;
+            })
+            .join("");
+        }
+      }
+
+      const logSection = this._logLines
+        ? `<div class="logbox">${esc(this._logLines.join("\n")) || "Log ist leer."}</div>`
+        : "";
+
+      return `<div class="smenu">
+          <div class="actions">
+            ${btn("sv-rename", "mdi:rename-box-outline", "Umbenennen")}
+            ${btn("sv-welcome", "mdi:hand-wave-outline", "Willkommensnachricht")}
+            ${btn("sv-maxclients", "mdi:account-multiple-outline", "Client-Limit")}
+            ${btn("sv-broadcast", "mdi:bullhorn-outline", "Rundnachricht")}
+            ${btn("sv-bans", "mdi:gavel", bansLabel)}
+            ${btn("sv-log", "mdi:text-box-outline", this._logLines ? "Log schließen" : "Server-Log")}
+          </div>
+          ${bansSection}
+          ${logSection}
         </div>`;
     }
 
@@ -360,6 +519,18 @@
       }
     }
 
+    // Service mit Response-Daten (get_logs, get_channel_info, ...) via WebSocket.
+    async _callResponse(service, data) {
+      const result = await this._hass.callWS({
+        type: "call_service",
+        domain: "teamspeak",
+        service,
+        service_data: data || {},
+        return_response: true,
+      });
+      return result?.response;
+    }
+
     _toast(message) {
       this.dispatchEvent(
         new CustomEvent("hass-notification", {
@@ -371,10 +542,16 @@
     }
 
     _onClick(ev) {
+      const serverActionEl = ev.target.closest("[data-saction]");
       const actionEl = ev.target.closest("[data-action]");
       const channelActionEl = ev.target.closest("[data-caction]");
       const row = ev.target.closest(".row");
 
+      if (serverActionEl) {
+        ev.stopPropagation();
+        this._handleServerAction(serverActionEl.dataset.saction, serverActionEl);
+        return;
+      }
       if (actionEl) {
         ev.stopPropagation();
         this._handleAction(actionEl.dataset.action, Number(actionEl.dataset.clid));
@@ -407,6 +584,7 @@
         const clid = Number(row.dataset.clid);
         this._selectedClid = this._selectedClid === clid ? null : clid;
         this._selectedCid = null;
+        this._channelInfo = null;
         this._rerender();
         return;
       }
@@ -415,7 +593,82 @@
         const cid = Number(row.dataset.cid);
         this._selectedCid = this._selectedCid === cid ? null : cid;
         this._selectedClid = null;
+        this._channelInfo = null;
         this._rerender();
+      }
+    }
+
+    _handleServerAction(action, el) {
+      switch (action) {
+        case "sv-rename": {
+          const name = prompt("Neuer Servername:");
+          if (name)
+            this._call("edit_server", { name }, `Server in "${name}" umbenannt`);
+          break;
+        }
+        case "sv-welcome": {
+          const message = prompt("Neue Willkommensnachricht:");
+          if (message)
+            this._call(
+              "edit_server",
+              { welcome_message: message },
+              "Willkommensnachricht geändert"
+            );
+          break;
+        }
+        case "sv-maxclients": {
+          const current = this._config.max_clients_entity
+            ? this._hass.states[this._config.max_clients_entity]?.state
+            : "";
+          const input = prompt(
+            "Neues Client-Limit:",
+            /^\d+$/.test(current) ? current : ""
+          );
+          if (input === null) break;
+          const max = parseInt(input, 10);
+          if (max > 0)
+            this._call(
+              "edit_server",
+              { max_clients: max },
+              `Client-Limit auf ${max} gesetzt`
+            );
+          break;
+        }
+        case "sv-broadcast": {
+          const message = prompt("Rundnachricht an alle:");
+          if (message)
+            this._call("broadcast_message", { message }, "Rundnachricht gesendet");
+          break;
+        }
+        case "sv-bans":
+          this._showBans = !this._showBans;
+          this._rerender();
+          break;
+        case "sv-log":
+          if (this._logLines) {
+            this._logLines = null;
+            this._rerender();
+            break;
+          }
+          this._callResponse("get_logs", { lines: 30 })
+            .then((resp) => {
+              this._logLines = resp?.lines || [];
+              this._rerender();
+            })
+            .catch((err) =>
+              alert(`TeamSpeak: Log konnte nicht geladen werden\n${err.message || err}`)
+            );
+          break;
+        case "sv-unban": {
+          const banId = Number(el.dataset.banid);
+          const ban = this._bans().find((b) => b.ban_id === banId);
+          const who = ban
+            ? ban.last_nickname || ban.name || ban.ip || `#${banId}`
+            : `#${banId}`;
+          if (confirm(`Bann für "${who}" wirklich aufheben?`))
+            this._call("unban_client", { ban_id: banId }, `Bann für ${who} aufgehoben`);
+          break;
+        }
       }
     }
 
@@ -423,6 +676,24 @@
       const channel = this._channel(cid);
       const name = channel ? channel.name : `cid ${cid}`;
       switch (action) {
+        case "ch-info": {
+          if (this._channelInfo && this._channelInfo.cid === cid) {
+            this._channelInfo = null;
+            this._rerender();
+            break;
+          }
+          this._callResponse("get_channel_info", { channel_id: cid })
+            .then((info) => {
+              this._channelInfo = { cid, data: info || {} };
+              this._rerender();
+            })
+            .catch((err) =>
+              alert(
+                `TeamSpeak: Kanal-Details konnten nicht geladen werden\n${err.message || err}`
+              )
+            );
+          break;
+        }
         case "ch-msg": {
           const message = prompt(`Nachricht in Kanal "${name}":`);
           if (message)
@@ -472,6 +743,15 @@
     _handleAction(action, clid) {
       const name = this._clientName(clid);
       switch (action) {
+        case "server-menu":
+          if (!this._config.show_actions) break;
+          this._serverMenu = !this._serverMenu;
+          if (!this._serverMenu) {
+            this._showBans = false;
+            this._logLines = null;
+          }
+          this._rerender();
+          break;
         case "cancel-move":
           this._moveClid = null;
           this._rerender();
